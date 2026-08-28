@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VCU Admin Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    /* Simple Authentication */
+    .auth-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    }
+
+    .auth-card {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 450px;
+      width: 100%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+
+    .auth-card h1 {
+      color: #dc2626;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .simple-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 16px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .simple-input:focus {
+      outline: none;
+      border-color: #dc2626;
+    }
+
+    .auth-btn {
+      background: #dc2626;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 24px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s ease;
+    }
+
+    .auth-btn:hover:not(:disabled) {
+      background: #b91c1c;
+    }
+
+    .auth-btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .error-message {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 15px 0;
+      font-size: 14px;
+    }
+
+    .success-message {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #059669;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 15px 0;
+      font-size: 14px;
+    }
+
+    /* Dashboard Styles */
+    .main-dashboard {
+      background: #f9fafb;
+      min-height: 100vh;
+    }
+
+    .dashboard-header {
+      background: #dc2626;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      position: relative;
+    }
+
+    .dashboard-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .admin-info {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      font-size: 14px;
+    }
+
+    .admin-email {
+      background: rgba(255,255,255,0.2);
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+
+    .logout-btn {
+      background: #991b1b;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: background 0.2s ease;
+    }
+
+    .logout-btn:hover {
+      background: #7f1d1d;
+    }
+
+    .dashboard-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 36px;
+      font-weight: 700;
+      color: #dc2626;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      color: #6b7280;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* Controls */
+    .controls-bar {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .control-input {
+      padding: 10px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+      min-width: 180px;
+    }
+
+    .control-input:focus {
+      outline: none;
+      border-color: #dc2626;
+    }
+
+    .control-btn {
+      background: #059669;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .control-btn:hover {
+      background: #047857;
+    }
+
+    .control-btn.secondary {
+      background: #6b7280;
+    }
+
+    .control-btn.secondary:hover {
+      background: #4b5563;
+    }
+
+    /* Table */
+    .admin-table {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+
+    .admin-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .admin-table th {
+      background: #f8fafc;
+      padding: 16px;
+      text-align: left;
+      font-weight: 600;
+      color: #374151;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 14px;
+    }
+
+    .admin-table td {
+      padding: 16px;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    .admin-table tr:hover {
+      background: #f9fafb;
+    }
+
+    .mentor-name-link {
+      font-weight: 600;
+      color: #dc2626;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .mentor-name-link:hover {
+      color: #991b1b;
+      text-decoration: underline;
+    }
+
+    .student-list {
+      max-width: 250px;
+    }
+
+    .student-email {
+      display: inline-block;
+      background: #e3f2fd;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin: 2px;
+      position: relative;
+    }
+
+    .remove-student {
+      background: #dc2626;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      font-size: 10px;
+      cursor: pointer;
+      margin-left: 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .remove-student:hover {
+      background: #991b1b;
+    }
+
+    .action-btn {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      margin: 2px;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+      background: #2563eb;
+    }
+
+    .action-btn.success {
+      background: #059669;
+    }
+
+    .action-btn.success:hover {
+      background: #047857;
+    }
+
+    .action-btn.danger {
+      background: #dc2626;
+    }
+
+    .action-btn.danger:hover {
+      background: #b91c1c;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 2000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+    }
+
+    .modal-content {
+      background: white;
+      margin: 3% auto;
+      padding: 0;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+      color: white;
+      padding: 25px 30px;
+      border-radius: 12px 12px 0 0;
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      color: white;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 35px;
+      height: 35px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background 0.2s ease;
+    }
+
+    .modal-close:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .modal-body {
+      padding: 30px;
+    }
+
+    .modal-section {
+      margin-bottom: 25px;
+    }
+
+    .modal-section h3 {
+      color: #1f2937;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #f3f4f6;
+      padding-bottom: 8px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .info-item {
+      background: #f8fafc;
+      padding: 12px 15px;
+      border-radius: 8px;
+      border-left: 4px solid #dc2626;
+    }
+
+    .info-label {
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .info-value {
+      color: #1f2937;
+      font-weight: 500;
+    }
+
+    .student-management {
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .student-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .student-row:last-child {
+      border-bottom: none;
+    }
+
+    .add-student-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 15px;
+      margin-top: 25px;
+      padding-top: 25px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .modal-btn {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .modal-btn.primary {
+      background: #059669;
+      color: white;
+    }
+
+    .modal-btn.primary:hover {
+      background: #047857;
+    }
+
+    .modal-btn.secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .modal-btn.secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .loading-container {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .loader {
+      border: 4px solid #f3f4f6;
+      border-top: 4px solid #dc2626;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Confirmation Modal */
+    .confirm-modal {
+      display: none;
+      position: fixed;
+      z-index: 3000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+    }
+
+    .confirm-modal-content {
+      background: white;
+      margin: 15% auto;
+      padding: 0;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      text-align: center;
+    }
+
+    .confirm-header {
+      background: #dc2626;
+      color: white;
+      padding: 20px;
+      border-radius: 12px 12px 0 0;
+    }
+
+    .confirm-body {
+      padding: 30px;
+    }
+
+    .confirm-buttons {
+      display: flex;
+      gap: 15px;
+      margin-top: 25px;
+    }
+
+    .confirm-btn {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .confirm-btn.danger {
+      background: #dc2626;
+      color: white;
+    }
+
+    .confirm-btn.danger:hover {
+      background: #b91c1c;
+    }
+
+    .confirm-btn.cancel {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .admin-info {
+        position: static;
+        margin-top: 15px;
+        justify-content: center;
+      }
+
+      .controls-bar {
+        flex-direction: column;
+      }
+
+      .control-input {
+        min-width: auto;
+        width: 100%;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-table th, .admin-table td {
+        padding: 10px 8px;
+        font-size: 12px;
+      }
+
+      .student-list {
+        max-width: 150px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Simple Admin Login -->
+  <div id="adminAuth" class="auth-container">
+    <div class="auth-card">
+      <h1>🛡️ Admin Access</h1>
+      <p style="color: #6b7280; margin-bottom: 30px;"> VCU Engineering Career Conversation</p>
+      
+      <div id="authMessage"></div>
+      
+      <input 
+        type="password" 
+        id="adminPassword" 
+        class="simple-input" 
+        placeholder="Enter admin password"
+        onkeypress="handleAuthEnter(event)"
+      >
+      
+      <button id="authBtn" class="auth-btn" onclick="handleAuth()">
+        Access Dashboard
+      </button>
+      
+      <div style="margin-top: 20px; padding: 15px; background: #fef2f2; border-radius: 8px; font-size: 13px; color: #991b1b;">
+        <strong>🔐 Admin Only:</strong> Authorized VCU staff access required
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Dashboard -->
+  <div id="adminDashboard" class="main-dashboard hidden">
+    <header class="dashboard-header">
+      <h1>🛡️ VCU Admin Dashboard 2026
+      </h1>
+      <p>Mentor Career Chat</p>
+      <div class="admin-info">
+        <span class="admin-email">👨‍💼 Admin</span>
+        <button class="logout-btn" onclick="handleLogout()">Logout</button>
+      </div>
+    </header>
+
+    <div class="dashboard-content">
+      <!-- Statistics -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-number" id="totalMentors">-</span>
+          <div class="stat-label">Total Mentors</div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number" id="totalStudents">-</span>
+          <div class="stat-label">Students Booked</div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number" id="availableSlots">-</span>
+          <div class="stat-label">Available Slots</div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number" id="fullMentors">-</span>
+          <div class="stat-label">Mentors at Capacity</div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls-bar">
+        <input type="text" class="control-input" id="searchMentor" placeholder="Search mentors..." onkeyup="filterTable()">
+        <input type="text" class="control-input" id="searchStudent" placeholder="Search students..." onkeyup="filterTable()">
+        <select class="control-input" id="filterStatus" onchange="filterTable()">
+          <option value="">All Mentors</option>
+          <option value="available">Available</option>
+          <option value="full">At Capacity</option>
+          <option value="has_students">Has Students</option>
+        </select>
+        <button class="control-btn" onclick="refreshData()">🔄 Refresh</button>
+        <button class="control-btn secondary" onclick="exportData()">📊 Export</button>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loadingState" class="loading-container">
+        <div class="loader"></div>
+        <p>Loading admin data...</p>
+      </div>
+
+      <!-- Main Table -->
+      <div id="adminTable" class="admin-table hidden">
+        <table>
+          <thead>
+            <tr>
+              <th>Mentor Name</th>
+              <th>Company</th>
+              <th>Industry</th>
+              <th>Available Slots</th>
+              <th>Booked Students</th>
+              <th>Student Emails</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Data will be inserted here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mentor Management Modal -->
+  <div id="mentorModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+        <div class="modal-title" id="modalMentorName">Mentor Career Chat</div>
+        <div style="opacity: 0.9; font-size: 14px;">Manage mentor details and student connections</div>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Mentor Information -->
+        <div class="modal-section">
+          <h3>📋 Mentor Information</h3>
+          <div class="info-grid" id="mentorInfoGrid">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Student Management -->
+        <div class="modal-section">
+          <h3>👥 Student Connections (<span id="studentCount">0</span>)</h3>
+          <div class="student-management">
+            <div id="studentsList">
+              <!-- Populated dynamically -->
+            </div>
+            
+            <div class="add-student-row">
+              <input type="email" id="newStudentEmail" class="control-input" placeholder="student@vcu.edu" style="flex: 1;">
+              <button class="action-btn success" onclick="addStudent()">Add Student</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="modal-section">
+          <h3>⚡ Quick Actions</h3>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="action-btn danger" onclick="removeAllStudents()">Remove All Students</button>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="modal-btn secondary" onclick="closeModal()">Close</button>
+          <button class="modal-btn primary" onclick="saveChanges()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmModal" class="confirm-modal">
+    <div class="confirm-modal-content">
+      <div class="confirm-header">
+        <h3 id="confirmTitle">Confirm Action</h3>
+      </div>
+      <div class="confirm-body">
+        <p id="confirmMessage">Are you sure?</p>
+        <div class="confirm-buttons">
+          <button class="confirm-btn cancel" onclick="closeConfirmModal()">Cancel</button>
+          <button class="confirm-btn danger" id="confirmActionBtn" onclick="executeConfirmAction()">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let adminData = [];
+    let currentMentor = null;
+    let isAuthenticated = false;
+    let confirmCallback = null;
+
+    // Custom confirmation modal (no more ugly browser confirms)
+    function showConfirmModal(title, message, actionText, callback) {
+      document.getElementById("confirmTitle").textContent = title;
+      document.getElementById("confirmMessage").textContent = message;
+      document.getElementById("confirmActionBtn").textContent = actionText;
+      confirmCallback = callback;
+      document.getElementById("confirmModal").style.display = "block";
+    }
+
+    function closeConfirmModal() {
+      document.getElementById("confirmModal").style.display = "none";
+      confirmCallback = null;
+    }
+
+    function executeConfirmAction() {
+      if (confirmCallback) {
+        confirmCallback();
+      }
+      closeConfirmModal();
+    }
+
+    // Authentication
+    function handleAuthEnter(event) {
+      if (event.key === 'Enter') {
+        handleAuth();
+      }
+    }
+
+    function handleAuth() {
+      const password = document.getElementById("adminPassword").value.trim();
+      const authBtn = document.getElementById("authBtn");
+      
+      if (!password) {
+        showAuthMessage("Please enter the admin password.", "error");
+        return;
+      }
+      
+      authBtn.disabled = true;
+      authBtn.textContent = "Authenticating...";
+      
+      // Simple password check
+      if (password === "vcu2026admin") {
+        isAuthenticated = true;
+        showDashboard();
+        loadData();
+      } else {
+        authBtn.disabled = false;
+        authBtn.textContent = "Access Dashboard";
+        showAuthMessage("Invalid admin password.", "error");
+      }
+    }
+
+    function showAuthMessage(message, type = "info") {
+      const messageDiv = document.getElementById("authMessage");
+      if (message) {
+        let className = "success-message";
+        if (type === "error") className = "error-message";
+        messageDiv.innerHTML = `<div class="${className}">${message}</div>`;
+      } else {
+        messageDiv.innerHTML = "";
+      }
+    }
+
+    function showDashboard() {
+      document.getElementById("adminAuth").classList.add("hidden");
+      document.getElementById("adminDashboard").classList.remove("hidden");
+    }
+
+    function handleLogout() {
+      isAuthenticated = false;
+      document.getElementById("adminPassword").value = "";
+      document.getElementById("authBtn").disabled = false;
+      document.getElementById("authBtn").textContent = "Access Dashboard";
+      showAuthMessage("");
+      
+      document.getElementById("adminAuth").classList.remove("hidden");
+      document.getElementById("adminDashboard").classList.add("hidden");
+    }
+
+    // Data loading-- I used to use google.script.run, but now using fetch for better error handling and flexibility
+   function loadData() {
+  document.getElementById("loadingState").classList.remove("hidden");
+  document.getElementById("adminTable").classList.add("hidden");
+
+  const webAppUrl = "https://script.google.com/macros/s/AKfycbw-JPye5itKs5r-qdx8kOw8ZnZ0YwcOulc1UnztyPk4h_VLWJ7pcfy8lpLjaziZMXzHFA/exec";
+
+  // Use standard fetch instead of google.script.run
+  fetch(webAppUrl + "?action=getMentors")
+    .then(response => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      return response.json();
+    })
+    .then(data => {
+      adminData = data.mentors || [];
+      updateStats(data);
+      displayTable(adminData);
+      document.getElementById("loadingState").classList.add("hidden");
+      document.getElementById("adminTable").classList.remove("hidden");
+    })
+    .catch(error => {
+      document.getElementById("loadingState").classList.add("hidden");
+      document.getElementById("tableBody").innerHTML = 
+        `<tr><td colspan="7" class="error-message">Error loading data: ${error.message}</td></tr>`;
+      document.getElementById("adminTable").classList.remove("hidden");
+    });
+}
+
+
+    function updateStats(data) {
+      document.getElementById("totalMentors").textContent = data.totalMentors || 0;
+      document.getElementById("totalStudents").textContent = data.totalBookings || 0;
+      document.getElementById("availableSlots").textContent = data.availableSlots || 0;
+      
+      const fullMentors = adminData.filter(m => m.availableSlots <= 0).length;
+      document.getElementById("fullMentors").textContent = fullMentors;
+    }
+
+    function displayTable(mentors) {
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+
+      if (mentors.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center; padding: 40px;'>No mentors found</td></tr>";
+        return;
+      }
+
+      mentors.forEach(function(mentor) {
+        const row = document.createElement("tr");
+        
+        let studentEmailsHtml = "";
+        if (mentor.signedUpStudents && mentor.signedUpStudents.length > 0) {
+          studentEmailsHtml = mentor.signedUpStudents
+            .map(email => `
+              <span class="student-email">
+                ${email}
+                <button class="remove-student" onclick="removeStudentQuick('${mentor.name.replace(/'/g, "\\'")}', '${email}')" title="Remove student">×</button>
+              </span>
+            `).join(" ");
+        } else {
+          studentEmailsHtml = "<span style='color: #999; font-style: italic;'>No students</span>";
+        }
+
+        const safeName = mentor.name.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
+        row.innerHTML = `
+          <td><a href="javascript:void(0)" class="mentor-name-link" onclick="showMentorModal('${safeName}'); return false;">${mentor.name}</a></td>
+          <td>${mentor.company || "Not specified"}</td>
+          <td>${mentor.industry || "Not specified"}</td>
+          <td style="text-align: center; font-weight: bold; color: ${mentor.availableSlots > 0 ? '#059669' : '#dc2626'}">${mentor.availableSlots}</td>
+          <td style="text-align: center; font-weight: bold;">${mentor.signedUpStudents ? mentor.signedUpStudents.length : 0}</td>
+          <td><div class="student-list">${studentEmailsHtml}</div></td>
+          <td>
+            <button class="action-btn" onclick="showMentorModal('${safeName}')">Manage</button>
+          </td>
+        `;
+        
+        tbody.appendChild(row);
+      });
+    }
+
+    // Modal functions
+    function showMentorModal(mentorName) {
+      const mentor = adminData.find(m => m.name === mentorName);
+      if (!mentor) {
+        alert("Mentor not found");
+        return;
+      }
+
+      currentMentor = mentor;
+      document.getElementById("modalMentorName").textContent = mentor.name;
+      
+      // Populate mentor info
+      const infoGrid = document.getElementById("mentorInfoGrid");
+      infoGrid.innerHTML = `
+        <div class="info-item">
+          <div class="info-label">Full Name</div>
+          <div class="info-value">${mentor.name}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Company</div>
+          <div class="info-value">${mentor.company || "Not specified"}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Industry</div>
+          <div class="info-value">${mentor.industry || "Not specified"}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Area of Focus</div>
+          <div class="info-value">${mentor.areaOfFocus || "Not specified"}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Available Slots</div>
+          <div class="info-value" style="color: ${mentor.availableSlots > 0 ? '#059669' : '#dc2626'}; font-weight: bold;">${mentor.availableSlots}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Students Booked</div>
+          <div class="info-value" style="font-weight: bold;">${mentor.signedUpStudents ? mentor.signedUpStudents.length : 0}</div>
+        </div>
+      `;
+
+      // Populate students list
+      const studentsList = document.getElementById("studentsList");
+      const studentCount = document.getElementById("studentCount");
+      
+      if (mentor.signedUpStudents && mentor.signedUpStudents.length > 0) {
+        studentCount.textContent = mentor.signedUpStudents.length;
+        studentsList.innerHTML = mentor.signedUpStudents.map(email => `
+          <div class="student-row">
+            <span>${email}</span>
+            <button class="action-btn danger" onclick="removeStudent('${email}')">Remove</button>
+          </div>
+        `).join("");
+      } else {
+        studentCount.textContent = "0";
+        studentsList.innerHTML = "<div style='text-align: center; color: #999; padding: 20px; font-style: italic;'>No students booked yet</div>";
+      }
+
+      document.getElementById("mentorModal").style.display = "block";
+    }
+
+    function closeModal() {
+      document.getElementById("mentorModal").style.display = "none";
+      currentMentor = null;
+      document.getElementById("newStudentEmail").value = "";
+    }
+
+    // Show status messages in a nice way (no ugly alerts)
+    function showMessage(message, type = "success") {
+      // Create or update message element
+      let messageEl = document.getElementById("statusMessage");
+      if (!messageEl) {
+        messageEl = document.createElement("div");
+        messageEl.id = "statusMessage";
+        messageEl.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          padding: 15px 20px;
+          border-radius: 8px;
+          font-weight: 500;
+          z-index: 9999;
+          max-width: 400px;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        document.body.appendChild(messageEl);
+      }
+      
+      // Set message and styling
+      messageEl.textContent = message;
+      if (type === "success") {
+        messageEl.style.background = "#f0fdf4";
+        messageEl.style.color = "#059669";
+        messageEl.style.border = "1px solid #bbf7d0";
+      } else if (type === "error") {
+        messageEl.style.background = "#fef2f2";
+        messageEl.style.color = "#dc2626";
+        messageEl.style.border = "1px solid #fecaca";
+      }
+      
+      // Show and auto-hide
+      messageEl.style.display = "block";
+      messageEl.style.opacity = "1";
+      
+      setTimeout(() => {
+        messageEl.style.opacity = "0";
+        setTimeout(() => {
+          messageEl.style.display = "none";
+        }, 300);
+      }, 3000);
+    }
+
+    // Admin actions
+    function addStudent() {
+      const email = document.getElementById("newStudentEmail").value.trim();
+      if (!email) {
+        showMessage("Please enter a student email", "error");
+        return;
+      }
+
+      if (!currentMentor) {
+        showMessage("No mentor selected", "error");
+        return;
+      }
+
+      // Show loading in the button
+      const addBtn = document.querySelector('#newStudentEmail + button');
+      const originalText = addBtn.textContent;
+      addBtn.disabled = true;
+      addBtn.textContent = "Adding...";
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          addBtn.disabled = false;
+          addBtn.textContent = originalText;
+          
+          if (result.success) {
+            showMessage(`✅ Added ${email} to ${currentMentor.name}`);
+            document.getElementById("newStudentEmail").value = "";
+            refreshData(); // Reload data
+            showMentorModal(currentMentor.name); // Refresh modal
+          } else {
+            showMessage("Failed to add student: " + result.message, "error");
+          }
+        })
+        .withFailureHandler(function(error) {
+          addBtn.disabled = false;
+          addBtn.textContent = originalText;
+          showMessage("Error adding student: " + error, "error");
+        })
+        .addStudentToMentor(currentMentor.name, email);
+    }
+
+    function removeStudent(email) {
+      if (!currentMentor) {
+        showMessage("No mentor selected", "error");
+        return;
+      }
+
+      showConfirmModal(
+        "Remove Student",
+        `Remove ${email} from ${currentMentor.name}?`,
+        "Remove",
+        function() {
+          google.script.run
+            .withSuccessHandler(function(result) {
+              if (result.success) {
+                showMessage(`✅ Removed ${email} from ${currentMentor.name}`);
+                refreshData(); // Reload data
+                showMentorModal(currentMentor.name); // Refresh modal
+              } else {
+                showMessage("Failed to remove student: " + result.message, "error");
+              }
+            })
+            .withFailureHandler(function(error) {
+              showMessage("Error removing student: " + error, "error");
+            })
+            .removeStudentFromMentor(currentMentor.name, email);
+        }
+      );
+    }
+
+    function removeAllStudents() {
+      if (!currentMentor) {
+        showMessage("No mentor selected", "error");
+        return;
+      }
+
+      if (!currentMentor.signedUpStudents || currentMentor.signedUpStudents.length === 0) {
+        showMessage("No students to remove", "error");
+        return;
+      }
+
+      const studentCount = currentMentor.signedUpStudents.length;
+      showConfirmModal(
+        "Remove All Students",
+        `Remove ALL ${studentCount} students from ${currentMentor.name}? This action cannot be undone.`,
+        "Remove All",
+        function() {
+          // Remove each student
+          const students = [...currentMentor.signedUpStudents]; // Copy array
+          let removedCount = 0;
+          
+          students.forEach(function(email) {
+            google.script.run
+              .withSuccessHandler(function(result) {
+                removedCount++;
+                if (removedCount === students.length) {
+                  showMessage(`✅ Removed all ${students.length} students from ${currentMentor.name}`);
+                  refreshData();
+                  showMentorModal(currentMentor.name);
+                }
+              })
+              .withFailureHandler(function(error) {
+                console.error("Error removing student:", email, error);
+              })
+              .removeStudentFromMentor(currentMentor.name, email);
+          });
+        }
+      );
+    }
+
+    // Quick actions from table
+    function removeStudentQuick(mentorName, studentEmail) {
+      showConfirmModal(
+        "Remove Student",
+        `Remove ${studentEmail} from ${mentorName}?`,
+        "Remove",
+        function() {
+          google.script.run
+            .withSuccessHandler(function(result) {
+              if (result.success) {
+                showMessage(`✅ Removed ${studentEmail} from ${mentorName}`);
+                refreshData();
+              } else {
+                showMessage("Failed to remove student: " + result.message, "error");
+              }
+            })
+            .withFailureHandler(function(error) {
+              showMessage("Error removing student: " + error, "error");
+            })
+            .removeStudentFromMentor(mentorName, studentEmail);
+        }
+      );
+    }
+
+    // Filtering
+    function filterTable() {
+      const mentorQuery = document.getElementById("searchMentor").value.toLowerCase();
+      const studentQuery = document.getElementById("searchStudent").value.toLowerCase();
+      const statusFilter = document.getElementById("filterStatus").value;
+
+      const filtered = adminData.filter(function(mentor) {
+        const matchesMentor = !mentorQuery || 
+          mentor.name.toLowerCase().includes(mentorQuery) ||
+          (mentor.company && mentor.company.toLowerCase().includes(mentorQuery)) ||
+          (mentor.industry && mentor.industry.toLowerCase().includes(mentorQuery));
+        
+        const matchesStudent = !studentQuery || (mentor.signedUpStudents && 
+          mentor.signedUpStudents.some(email => email.toLowerCase().includes(studentQuery)));
+        
+        let matchesStatus = true;
+        if (statusFilter === "available") {
+          matchesStatus = mentor.availableSlots > 0;
+        } else if (statusFilter === "full") {
+          matchesStatus = mentor.availableSlots <= 0;
+        } else if (statusFilter === "has_students") {
+          matchesStatus = mentor.signedUpStudents && mentor.signedUpStudents.length > 0;
+        }
+        
+        return matchesMentor && matchesStudent && matchesStatus;
+      });
+
+      displayTable(filtered);
+    }
+
+    function refreshData() {
+      loadData();
+    }
+
+    function exportData() {
+      // Create CSV data
+      let csvContent = "Mentor Name,Company,Industry,Available Slots,Booked Students,Student Emails\n";
+      
+      adminData.forEach(function(mentor) {
+        const studentEmails = mentor.signedUpStudents ? mentor.signedUpStudents.join("; ") : "";
+        const studentCount = mentor.signedUpStudents ? mentor.signedUpStudents.length : 0;
+        
+        csvContent += `"${mentor.name}","${mentor.company || ""}","${mentor.industry || ""}",${mentor.availableSlots},${studentCount},"${studentEmails}"\n`;
+      });
+
+      // Download CSV
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `VCU_Mentor_Data_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function saveChanges() {
+      // This could be expanded to save any pending changes
+      // For now, just close the modal since changes are saved immediately
+      showMessage("All changes are saved automatically!");
+      closeModal();
+    }
+
+    // Initialize
+    window.onload = function() {
+      // Start with auth screen
+      document.getElementById("adminAuth").classList.remove("hidden");
+      document.getElementById("adminDashboard").classList.add("hidden");
+      
+      // Focus on password input
+      setTimeout(function() {
+        document.getElementById("adminPassword").focus();
+      }, 100);
+    };
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      const modal = document.getElementById("mentorModal");
+      const confirmModal = document.getElementById("confirmModal");
+      
+      if (event.target === modal) {
+        closeModal();
+      }
+      if (event.target === confirmModal) {
+        closeConfirmModal();
+      }
+    };
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(event) {
+      // Escape key closes modals
+      if (event.key === 'Escape') {
+        closeModal();
+        closeConfirmModal();
+      }
+      
+      // Ctrl+R refreshes data (prevent browser refresh)
+      if (event.ctrlKey && event.key === 'r') {
+        event.preventDefault();
+        if (isAuthenticated) {
+          refreshData();
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>
