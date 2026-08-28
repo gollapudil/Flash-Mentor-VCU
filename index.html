@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title> VCU Engineering  Career Conversation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: #333; }
+    .auth-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .auth-card { background: white; border-radius: 20px; padding: 40px; max-width: 500px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; }
+    .auth-card h1 { color: #1e3a8a; font-size: 28px; font-weight: 700; margin-bottom: 10px; }
+    .auth-card .subtitle { color: #6b7280; font-size: 16px; margin-bottom: 30px; line-height: 1.5; }
+    .email-input, .code-input { width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; margin-bottom: 20px; transition: border-color 0.2s ease; text-align: center; }
+    .code-input { font-size: 24px; font-weight: 600; letter-spacing: 4px; font-family: monospace; }
+    .email-input:focus, .code-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .email-input::placeholder, .code-input::placeholder { color: #9ca3af; letter-spacing: normal; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 400; }
+    .auth-btn { background: #4285f4; color: white; border: none; border-radius: 12px; padding: 14px 24px; font-size: 16px; font-weight: 500; cursor: pointer; width: 100%; transition: all 0.2s ease; margin-bottom: 15px; }
+    .auth-btn:hover:not(:disabled) { background: #3367d6; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(66,133,244,0.3); }
+    .auth-btn:active { transform: translateY(0); }
+    .auth-btn:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
+    .secondary-btn { background: transparent; color: #6b7280; border: 2px solid #e5e7eb; border-radius: 12px; padding: 12px 24px; font-size: 14px; font-weight: 500; cursor: pointer; width: 100%; transition: all 0.2s ease; }
+    .secondary-btn:hover:not(:disabled) { border-color: #3b82f6; color: #3b82f6; }
+    .requirement-note { background: #f3f4f6; border-radius: 12px; padding: 16px; font-size: 14px; color: #6b7280; border-left: 4px solid #1e3a8a; text-align: left; }
+    .verification-note { background: #eff6ff; border-radius: 12px; padding: 16px; font-size: 14px; color: #1e40af; border-left: 4px solid #3b82f6; text-align: left; margin-bottom: 20px; }
+    .error-message { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 14px; }
+    .success-message { background: #f0fdf4; border: 1px solid #bbf7d0; color: #059669; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 14px; }
+    .info-message { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 14px; }
+    .auth-loader { border: 3px solid #f3f4f6; border-top: 3px solid #4285f4; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-right: 10px; }
+    .main-app { background: #f9fafb; min-height: 100vh; }
+    .app-header { background: #1e3a8a; color: white; padding: 20px; text-align: center; position: relative; }
+    .app-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .app-header .subtitle { font-size: 16px; opacity: 0.9; }
+    .user-info { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 15px; font-size: 14px; }
+    .user-email { background: rgba(255,255,255,0.2); padding: 8px 12px; border-radius: 20px; font-weight: 500; }
+    .logout-btn { background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 500; transition: background 0.2s ease; }
+    .logout-btn:hover { background: #b91c1c; }
+    .main-content { max-width: 1200px; margin: 0 auto; padding: 30px 20px 100px 20px; }
+    .filter-bar { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }
+    .filter-input { flex: 1; min-width: 200px; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; transition: border-color 0.2s ease; }
+    .filter-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .mentors-table { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #f8fafc; padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb; }
+    td { padding: 16px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+    tr:hover { background: #f9fafb; }
+    .mentor-name-link { font-weight: 600; color: #2563eb !important; text-decoration: none; cursor: pointer; transition: all 0.2s ease; }
+    .mentor-name-link:hover { color: #1d4ed8 !important; text-decoration: underline; }
+    .mentor-name-link:visited { color: #2563eb !important; }
+
+    /* ── Button styles ── */
+    .book-btn { background: #059669; color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s ease; white-space: nowrap; }
+    .book-btn:hover { background: #047857; transform: translateY(-1px); }
+    .incart-btn { background: #f59e0b; color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s ease; white-space: nowrap; }
+    .incart-btn:hover { background: #d97706; }
+    .booked-confirm-btn {
+      position: relative; overflow: hidden;
+      background: #22c55e; color: white; border: none;
+      padding: 0 18px; border-radius: 8px; cursor: pointer;
+      font-size: 13px; font-weight: 500; white-space: nowrap;
+      height: 38px; min-width: 110px;
+      transition: background 0.3s ease;
+    }
+    .booked-confirm-btn:hover { background: #f59e0b; }
+    .booked-confirm-btn .slide-default,
+    .booked-confirm-btn .slide-done {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.3s ease;
+    }
+    .booked-confirm-btn .slide-default { transform: translateY(0); }
+    .booked-confirm-btn .slide-done    { transform: translateY(100%); }
+    .booked-confirm-btn:hover .slide-default { transform: translateY(-100%); }
+    .booked-confirm-btn:hover .slide-done    { transform: translateY(0); }
+    .full-btn { background: #e5e7eb; color: #6b7280; border: none; padding: 10px 18px; border-radius: 8px; cursor: not-allowed; font-size: 13px; font-weight: 500; white-space: nowrap; }
+
+    .loading-container { text-align: center; padding: 60px 20px; }
+    .loader { border: 4px solid #f3f4f6; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* ── Profile Modal ── */
+    .profile-modal { display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); animation: fadeIn 0.2s ease; }
+    .profile-modal-content { background: white; margin: 3% auto; padding: 0; border-radius: 12px; width: 90%; max-width: 700px; max-height: 85vh; overflow-y: auto; animation: slideIn 0.3s ease; }
+    .profile-header { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; position: relative; }
+    .profile-close { position: absolute; top: 15px; right: 20px; color: white; font-size: 28px; font-weight: bold; cursor: pointer; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background 0.2s ease; }
+    .profile-close:hover { background: rgba(255,255,255,0.2); }
+    .profile-name { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .profile-company { font-size: 16px; opacity: 0.9; }
+    .profile-body { padding: 30px; }
+    .profile-section { margin-bottom: 25px; }
+    .profile-section h3 { color: #1f2937; font-size: 18px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .profile-section p { color: #6b7280; line-height: 1.6; margin-bottom: 8px; }
+    .profile-highlight { background: #f8fafc; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+    .profile-stats { display: flex; gap: 20px; margin-bottom: 25px; }
+    .profile-stat { background: #f3f4f6; padding: 15px; border-radius: 8px; text-align: center; flex: 1; }
+    .profile-stat-number { font-size: 24px; font-weight: 700; color: #1e3a8a; display: block; }
+    .profile-stat-label { font-size: 14px; color: #6b7280; margin-top: 4px; }
+    .linkedin-link { display: inline-flex; align-items: center; gap: 8px; color: #0066cc; text-decoration: none; font-weight: 500; transition: color 0.2s ease; }
+    .linkedin-link:hover { color: #004499; }
+    .profile-actions { display: flex; gap: 15px; margin-top: 25px; padding-top: 25px; border-top: 1px solid #e5e7eb; }
+    .profile-book-btn { background: #059669; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 500; flex: 1; transition: all 0.2s ease; }
+    .profile-book-btn:hover:not(:disabled) { background: #047857; transform: translateY(-1px); }
+    .profile-book-btn:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
+    .profile-back-btn { background: #f3f4f6; color: #374151; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 500; }
+    .profile-back-btn:hover { background: #e5e7eb; }
+    .profile-loading { text-align: center; padding: 60px 30px; color: #6b7280; }
+    .profile-loading-spinner { border: 4px solid #f3f4f6; border-top: 4px solid #3b82f6; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    .profile-loading h4 { font-size: 18px; margin-bottom: 8px; color: #374151; }
+    .profile-loading p { font-size: 14px; color: #9ca3af; }
+    .profile-skeleton { padding: 30px; }
+    .skeleton-line { height: 16px; background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; margin-bottom: 12px; }
+    .skeleton-line.short { width: 60%; }
+    .skeleton-line.medium { width: 80%; }
+    .skeleton-line.long { width: 100%; }
+    .skeleton-stats { display: flex; gap: 20px; margin-bottom: 25px; }
+    .skeleton-stat { flex: 1; height: 80px; background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+    /* ── Booking Modal ── */
+    .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); animation: fadeIn 0.2s ease; }
+    .modal-content { background: white; margin: 10% auto; padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; text-align: center; animation: slideIn 0.3s ease; position: relative; z-index: 2001; }
+    .modal h3 { color: #1f2937; margin-bottom: 15px; font-size: 20px; }
+    .modal-buttons { display: flex; gap: 15px; justify-content: center; margin-top: 25px; }
+    .confirm-btn { background: #059669; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.2s ease; }
+    .confirm-btn:hover:not(:disabled) { background: #047857; transform: translateY(-1px); }
+    .confirm-btn:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
+    .cancel-btn { background: #6b7280; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.2s ease; }
+    .cancel-btn:hover { background: #4b5563; }
+
+    /* ── CART STYLES ── */
+    .cart-fab { position: fixed; bottom: 30px; right: 30px; background: #1e3a8a; color: white; border: none; border-radius: 50px; padding: 14px 22px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 20px rgba(30,58,138,0.4); z-index: 999; display: flex; align-items: center; gap: 10px; transition: all 0.2s ease; }
+    .cart-fab:hover { background: #1e40af; transform: translateY(-2px); box-shadow: 0 6px 24px rgba(30,58,138,0.5); }
+    .cart-badge { background: #ef4444; color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+    .cart-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1500; }
+    .cart-drawer { position: fixed; top: 0; right: -420px; width: 420px; max-width: 95vw; height: 100%; background: white; z-index: 1501; box-shadow: -4px 0 24px rgba(0,0,0,0.15); transition: right 0.3s cubic-bezier(0.16,1,0.3,1); display: flex; flex-direction: column; }
+    .cart-drawer.open { right: 0; }
+    .cart-drawer-header { background: #1e3a8a; color: white; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .cart-drawer-header h2 { font-size: 20px; font-weight: 700; }
+    .cart-drawer-close { background: rgba(255,255,255,0.15); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+    .cart-drawer-close:hover { background: rgba(255,255,255,0.3); }
+    .cart-drawer-body { flex: 1; overflow-y: auto; padding: 20px; }
+    .cart-empty { text-align: center; padding: 60px 20px; color: #9ca3af; }
+    .cart-empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .cart-empty p { font-size: 16px; }
+    .cart-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; margin-bottom: 14px; position: relative; }
+    .cart-item-order { position: absolute; top: 12px; left: 12px; background: #1e3a8a; color: white; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .cart-item-content { padding-left: 36px; }
+    .cart-item-name { font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 4px; }
+    .cart-item-meta { font-size: 13px; color: #6b7280; margin-bottom: 12px; }
+    .cart-item-slots { display: inline-block; background: #dcfce7; color: #15803d; font-size: 12px; font-weight: 500; padding: 3px 8px; border-radius: 20px; margin-bottom: 12px; }
+    .cart-item-actions { display: flex; gap: 10px; }
+    .cart-book-btn { background: #059669; color: white; border: none; padding: 9px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; flex: 1; transition: all 0.2s ease; }
+    .cart-book-btn:hover { background: #047857; }
+    .cart-remove-btn { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 9px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s ease; }
+    .cart-remove-btn:hover { background: #fee2e2; }
+    .cart-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; background: #f9fafb; flex-shrink: 0; }
+    .cart-footer-note { font-size: 13px; color: #6b7280; text-align: center; }
+
+    .hidden { display: none !important; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideIn { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    @media (max-width: 768px) {
+      .user-info { position: static; margin-top: 15px; justify-content: center; }
+      .filter-bar { flex-direction: column; }
+      .filter-input { min-width: auto; }
+      th, td { padding: 10px 8px; font-size: 13px; }
+      .modal-content { margin: 20% auto; padding: 20px; }
+      .modal-buttons { flex-direction: column; }
+      .cart-fab { bottom: 20px; right: 16px; padding: 12px 18px; font-size: 14px; }
+      .cart-drawer { width: 100%; max-width: 100vw; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Email Input Screen -->
+  <div id="emailScreen" class="auth-container">
+    <div class="auth-card">
+      <h1>🎓  VCU Engineering  Career Conversation</h1>
+      <p class="subtitle">Connect with industry professionals and alumni for personalized career guidance</p>
+      <div id="emailMessage"></div>
+      <input type="email" id="emailInput" class="email-input" placeholder="Enter your VCU email (e.g., student@vcu.edu)" onkeypress="handleEmailEnterKey(event)">
+      <button id="sendCodeBtn" class="auth-btn" onclick="handleSendCode()">Send Verification Code</button>
+      <div class="requirement-note">
+        <strong>Email Verification Required:</strong>
+        <ul style="margin:10px 0;padding-left:20px;text-align:left;">
+          <li>Enter your real @vcu.edu email address</li>
+          <li>We'll send a 6-digit verification code to confirm</li>
+          <li>Only verified VCU students can access mentors</li>
+          <li>You can book multiple mentor sessions</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Verification Code Screen -->
+  <div id="verificationScreen" class="auth-container hidden">
+    <div class="auth-card">
+      <h1>📧 Check Your Email</h1>
+      <p class="subtitle">We've sent a verification code to your VCU email address</p>
+      <div class="verification-note">
+        <strong>📬 Email sent to:</strong> <span id="verificationEmail"></span><br>
+        <strong>⏱️ Code expires in:</strong> 10 minutes
+      </div>
+      <div id="verificationMessage"></div>
+      <input type="text" id="codeInput" class="code-input" placeholder="Enter 6-digit code" maxlength="6" onkeypress="handleCodeEnterKey(event)" oninput="formatCodeInput(this)">
+      <button id="verifyBtn" class="auth-btn" onclick="handleVerifyCode()">Verify and Sign In</button>
+      <button class="secondary-btn" onclick="showEmailScreen()">← Use Different Email</button>
+    </div>
+  </div>
+
+  <!-- Main Application -->
+  <div id="mainApp" class="main-app hidden">
+    <header class="app-header">
+      <h1>🎓  VCU Engineering  Career Conversation</h1>
+      <p class="subtitle">Browse mentors, add to cart, and confirm your bookings</p>
+      <div class="user-info">
+        <span class="user-email" id="userEmail">✅ Verified</span>
+        <button class="logout-btn" onclick="handleLogout()">Logout</button>
+      </div>
+    </header>
+
+    <div class="main-content">
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <input type="text" class="filter-input" id="searchName" placeholder="Search by mentor name..." onkeyup="filterMentors()">
+        <input type="text" class="filter-input" id="searchCompany" placeholder="Filter by company..." onkeyup="filterMentors()">
+        <select class="filter-input" id="filterIndustry" onchange="filterMentors()">
+          <option value="">All Industries</option>
+        </select>
+        <select class="filter-input" id="filterMajor" onchange="filterMentors()">
+          <option value="">All Majors</option>
+        </select>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loadingState" class="loading-container">
+        <div class="loader"></div>
+        <p>Loading mentors...</p>
+      </div>
+
+      <!-- Mentors Table -->
+      <div id="mentorsTable" class="mentors-table hidden">
+        <table>
+          <thead>
+            <tr>
+              <th>Mentor Name</th>
+              <th>Area of Focus</th>
+              <th>Industry</th>
+              <th>Major</th>
+              <th>Company</th>
+              <th>Available Slots</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="mentorsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CART FAB Button ── -->
+  <button class="cart-fab hidden" id="cartFab" onclick="openCartDrawer()">
+    🛒 Cart <span class="cart-badge" id="cartBadge">0</span>
+  </button>
+
+  <!-- ── CART OVERLAY + DRAWER ── -->
+  <div class="cart-overlay" id="cartOverlay" onclick="closeCartDrawer()"></div>
+  <div class="cart-drawer" id="cartDrawer">
+    <div class="cart-drawer-header">
+      <h2>🛒 Your Cart</h2>
+      <button class="cart-drawer-close" onclick="closeCartDrawer()">✕</button>
+    </div>
+    <div class="cart-drawer-body" id="cartDrawerBody"></div>
+    <div class="cart-footer">
+      <p class="cart-footer-note">Click <strong>Confirm Booking</strong> on each mentor to book individually</p>
+    </div>
+  </div>
+
+  <!-- Mentor Profile Modal -->
+  <div id="profileModal" class="profile-modal">
+    <div class="profile-modal-content">
+      <div class="profile-header">
+        <span class="profile-close" onclick="closeProfileModal()">&times;</span>
+        <div class="profile-name" id="profileName"></div>
+        <div class="profile-company" id="profileCompany"></div>
+      </div>
+      <div class="profile-body">
+        <div id="profileLoadingState" class="profile-loading hidden">
+          <div class="profile-loading-spinner"></div>
+          <h4>Loading Profile...</h4>
+          <p>Getting mentor details</p>
+        </div>
+        <div id="profileSkeleton" class="profile-skeleton hidden">
+          <div class="skeleton-stats"><div class="skeleton-stat"></div><div class="skeleton-stat"></div></div>
+          <div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><br>
+          <div class="skeleton-line long"></div><div class="skeleton-line medium"></div><br>
+          <div class="skeleton-line short"></div><div class="skeleton-line medium"></div>
+        </div>
+        <div id="profileContent" class="hidden">
+          <div class="profile-stats">
+            <div class="profile-stat"><span class="profile-stat-number" id="profileSlots">0</span><div class="profile-stat-label">Available Slots</div></div>
+            <div class="profile-stat"><span class="profile-stat-number" id="profileBooked">0</span><div class="profile-stat-label">Students Booked</div></div>
+          </div>
+          <div class="profile-section">
+            <h3>🎯 Area of Focus</h3>
+            <div class="profile-highlight"><p id="profileFocus"></p></div>
+          </div>
+          <div class="profile-section">
+            <h3>🏢 Professional Background</h3>
+            <p><strong>Industry:</strong> <span id="profileIndustry"></span></p>
+            <p><strong>Company:</strong> <span id="profileCompanyDetail"></span></p>
+            <p id="profileMajorSection"><strong>College Major:</strong> <span id="profileMajor"></span></p>
+          </div>
+          <div class="profile-section" id="profileLinkedInSection">
+            <h3>🔗 Connect</h3>
+            <a id="profileLinkedIn" class="linkedin-link" target="_blank"><span>View LinkedIn Profile</span><span>↗</span></a>
+          </div>
+          <div class="profile-section" id="profileAdditionalSection">
+            <h3>💡 Additional Information</h3>
+            <p id="profileAdditional"></p>
+          </div>
+          <div class="profile-actions">
+            <button class="profile-back-btn" onclick="closeProfileModal()">← Back to List</button>
+            <button id="profileBookBtn" class="profile-book-btn" onclick="addToCartFromProfile()">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Booking Confirmation Modal -->
+  <div id="bookingModal" class="modal">
+    <div class="modal-content">
+      <h3>Confirm Your Booking</h3>
+      <p>Are you sure you want to book a career chat session with:</p>
+      <p style="margin:10px 0;"><strong id="modalMentorName"></strong></p>
+      <p>A confirmation email will be sent to <strong id="modalUserEmail"></strong></p>
+      <div id="bookingMessage"></div>
+      <div class="modal-buttons" id="modalButtons">
+        <button class="confirm-btn" onclick="confirmBooking()">Yes, Book Session</button>
+        <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  
+  // ── SESSION MANAGEMENT ──────────────────────────────────────
+const SESSION_INACTIVITY_MS = 30 * 60 * 1000;  // 30 min idle
+const SESSION_MAX_MS        =  8 * 60 * 60 * 1000;  // 8 hrs max
+
+function saveSession(email) {
+  localStorage.setItem('vcu_session', JSON.stringify({
+    email:        email,
+    loginTime:    Date.now(),
+    lastActivity: Date.now()
+  }));
+}
+
+function clearSession() {
+  localStorage.removeItem('vcu_session');
+}
+
+function getValidSession() {
+  try {
+    const raw = localStorage.getItem('vcu_session');
+    if (!raw) return null;
+    const s   = JSON.parse(raw);
+    const now = Date.now();
+    if (now - s.lastActivity > SESSION_INACTIVITY_MS) { clearSession(); return null; }
+    if (now - s.loginTime    > SESSION_MAX_MS)         { clearSession(); return null; }
+    return s;
+  } catch(e) { clearSession(); return null; }
+}
+
+function updateActivity() {
+  try {
+    const raw = localStorage.getItem('vcu_session');
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    s.lastActivity = Date.now();
+    localStorage.setItem('vcu_session', JSON.stringify(s));
+  } catch(e) {}
+}
+
+let _activityTimer = null;
+function resetActivityTimer() {
+  updateActivity();
+  clearTimeout(_activityTimer);
+  _activityTimer = setTimeout(function() {
+    clearSession();
+    handleLogout();
+    showEmailMessage('Logged out due to inactivity.', 'info');
+  }, SESSION_INACTIVITY_MS);
+}
+
+function setupActivityTracking() {
+  ['click','keypress','scroll','mousemove'].forEach(function(ev) {
+    document.addEventListener(ev, resetActivityTimer, { passive: true });
+  });
+  resetActivityTimer();
+}
+// ────────────────────────────────────────────────────────────
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbw-JPye5itKs5r-qdx8kOw8ZnZ0YwcOulc1UnztyPk4h_VLWJ7pcfy8lpLjaziZMXzHFA/exec";
+
+    function callGAS(action, params) {
+      var body = JSON.stringify(Object.assign({ action: action }, params || {}));
+      return fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: body })
+        .then(function(r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+    }
+
+    // ── State ────────────────────────────────────────────────────────────────
+    var allMentors       = [];
+    var cartMentors      = [];        // mentors queued for booking
+    var bookedMentorNames = new Set(); // mentor names already confirmed-booked
+    var selectedMentor   = null;      // mentor being confirmed right now
+    var currentUserEmail = null;
+    var currentProfile   = null;
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    function initializeApp() { 
+  const session = getValidSession();
+  if (session) {
+    // ✅ Restore session — skip login screen
+    currentUserEmail = session.email;
+    setupActivityTracking();
+    showMainApp();
+    checkUserBooking();
+  } else {
+    showEmailScreen();
+  }
+ }
+
+    function showEmailScreen() {
+      document.getElementById("emailScreen").classList.remove("hidden");
+      document.getElementById("verificationScreen").classList.add("hidden");
+      document.getElementById("mainApp").classList.add("hidden");
+      setTimeout(function() { document.getElementById("emailInput").focus(); }, 100);
+    }
+
+    function showVerificationScreen(email) {
+      document.getElementById("emailScreen").classList.add("hidden");
+      document.getElementById("verificationScreen").classList.remove("hidden");
+      document.getElementById("mainApp").classList.add("hidden");
+      document.getElementById("verificationEmail").textContent = email;
+      setTimeout(function() { document.getElementById("codeInput").focus(); }, 100);
+    }
+
+    function showMainApp() {
+      document.getElementById("emailScreen").classList.add("hidden");
+      document.getElementById("verificationScreen").classList.add("hidden");
+      document.getElementById("mainApp").classList.remove("hidden");
+      document.getElementById("userEmail").textContent = "✅ " + currentUserEmail;
+      document.getElementById("cartFab").classList.remove("hidden");
+    }
+
+    function showEmailMessage(message, type) {
+      type = type || "info";
+      var el = document.getElementById("emailMessage");
+      el.innerHTML = message ? '<div class="' + (type==="error"?"error-message":type==="success"?"success-message":"info-message") + '">' + message + '</div>' : "";
+    }
+    function showVerificationMessage(message, type) {
+      type = type || "info";
+      var el = document.getElementById("verificationMessage");
+      el.innerHTML = message ? '<div class="' + (type==="error"?"error-message":type==="success"?"success-message":"info-message") + '">' + message + '</div>' : "";
+    }
+
+    function handleEmailEnterKey(e) { if (e.key === 'Enter') handleSendCode(); }
+    function handleCodeEnterKey(e)  { if (e.key === 'Enter') handleVerifyCode(); }
+    function formatCodeInput(input) { input.value = input.value.replace(/[^0-9]/g, ''); }
+
+    // ── 1. Send Code ─────────────────────────────────────────────────────────
+    function handleSendCode() {
+      var emailInput = document.getElementById("emailInput");
+      var btn = document.getElementById("sendCodeBtn");
+      var email = emailInput.value.trim();
+      if (!email) { showEmailMessage("Please enter your VCU email address.", "error"); emailInput.focus(); return; }
+      btn.disabled = true;
+      btn.innerHTML = '<div class="auth-loader"></div>Sending code...';
+      showEmailMessage("Sending verification code to your email...", "info");
+      callGAS("sendVerificationCode", { email: email })
+        .then(function(result) {
+          if (result.success) {
+            showEmailMessage("Verification code sent! Check your email.", "success");
+            setTimeout(function() { showVerificationScreen(result.email); }, 1500);
+          } else {
+            btn.disabled = false; btn.innerHTML = 'Send Verification Code';
+            showEmailMessage(result.message, "error"); emailInput.focus();
+          }
+        })
+        .catch(function(error) {
+          btn.disabled = false; btn.innerHTML = 'Send Verification Code';
+          showEmailMessage("Failed to send verification code. Please try again.", "error"); emailInput.focus();
+        });
+    }
+
+    // ── 2. Verify Code ───────────────────────────────────────────────────────
+    function handleVerifyCode() {
+      var emailInput = document.getElementById("emailInput");
+      var codeInput  = document.getElementById("codeInput");
+      var btn        = document.getElementById("verifyBtn");
+      var email = emailInput.value.trim();
+      var code  = codeInput.value.trim();
+	  currentUserEmail = email;
+	  saveSession(email);    // ← ADD
+	  setupActivityTracking(); 
+      if (!code || code.length !== 6) { showVerificationMessage("Please enter the 6-digit verification code.", "error"); codeInput.focus(); return; }
+      btn.disabled = true; btn.innerHTML = '<div class="auth-loader"></div>Verifying...';
+      showVerificationMessage("Verifying your code...", "info");
+      callGAS("verifyCodeAndAuthenticate", { email: email, code: code })
+        .then(function(result) {
+          if (result.success) {
+            currentUserEmail = result.email;
+			saveSession(result.email);  
+			setupActivityTracking();
+            showVerificationMessage("Verification successful! Loading mentors...", "success");
+            setTimeout(function() { showMainApp(); loadMentors(); }, 1500);
+          } else {
+            btn.disabled = false; btn.innerHTML = 'Verify and Sign In';
+            showVerificationMessage(result.message, "error"); codeInput.focus(); codeInput.select();
+          }
+        })
+        .catch(function() {
+          btn.disabled = false; btn.innerHTML = 'Verify and Sign In';
+          showVerificationMessage("Verification failed. Please try again.", "error"); codeInput.focus();
+        });
+    }
+
+    // ── 3. Logout ────────────────────────────────────────────────────────────
+    function handleLogout() {
+	  clearSession();   
+	  clearTimeout(_activityTimer);
+      currentUserEmail = null; allMentors = []; cartMentors = []; bookedMentorNames = new Set(); selectedMentor = null;
+      document.getElementById("emailInput").value = "";
+      document.getElementById("codeInput").value = "";
+      document.getElementById("sendCodeBtn").disabled = false;
+      document.getElementById("sendCodeBtn").innerHTML = 'Send Verification Code';
+      document.getElementById("verifyBtn").disabled = false;
+      document.getElementById("verifyBtn").innerHTML = 'Verify and Sign In';
+      document.getElementById("cartFab").classList.add("hidden");
+      closeCartDrawer();
+      showEmailMessage(""); showVerificationMessage("");
+      showEmailScreen();
+      showEmailMessage("You have been logged out.", "info");
+    }
+    function checkUserBooking() {
+  if (!currentUserEmail) return;
+
+  callGAS({ action: "checkUserBookingStatus", email: currentUserEmail })
+    .then(function(bookingStatus) {
+      userBookingStatus = bookingStatus;
+
+      if (bookingStatus.hasBooked) {
+        document.getElementById('bookingAlert').classList.remove('hidden');
+        document.getElementById('bookedMentorName').textContent = bookingStatus.mentorName;
+      } else {
+        document.getElementById('bookingAlert').classList.add('hidden');
+      }
+
+      loadMentors();
+    })
+    .catch(function(error) {
+      console.error("Error checking booking status:", error);
+      loadMentors(); // still load mentors even if check fails
+    });
+}
+    // ── 4. Load Mentors ──────────────────────────────────────────────────────
+    function loadMentors() {
+      document.getElementById("loadingState").classList.remove("hidden");
+      document.getElementById("mentorsTable").classList.add("hidden");
+      callGAS("getMentors", { email: currentUserEmail })
+        .then(function(mentors) {
+          allMentors = mentors;
+          // Seed bookedMentorNames from server-side isBookedByCurrentUser flag
+          allMentors.forEach(function(m) { if (m.isBookedByCurrentUser) bookedMentorNames.add(m.name); });
+          populateFilters();
+          displayMentors(allMentors);
+          document.getElementById("loadingState").classList.add("hidden");
+          document.getElementById("mentorsTable").classList.remove("hidden");
+        })
+        .catch(function(error) {
+          document.getElementById("loadingState").classList.add("hidden");
+          document.getElementById("mentorsTableBody").innerHTML =
+            '<tr><td colspan="7" class="error-message">Error loading mentors: ' + error + '</td></tr>';
+          document.getElementById("mentorsTable").classList.remove("hidden");
+        });
+    }
+
+    // ── 5. Display Mentors ───────────────────────────────────────────────────
+    function displayMentors(mentors) {
+      var tbody = document.getElementById("mentorsTableBody");
+      tbody.innerHTML = "";
+      if (mentors.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center;padding:40px;'>No mentors found.</td></tr>";
+        return;
+      }
+      mentors.forEach(function(mentor) {
+        var row = document.createElement("tr");
+        var safeName = mentor.name.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        var actionBtn = getActionButton(mentor, safeName);
+        row.innerHTML =
+          '<td><a href="javascript:void(0)" class="mentor-name-link" onclick="showMentorProfile(\'' + safeName + '\')">' + mentor.name + '</a></td>' +
+          '<td>' + (mentor.areaOfFocus || '') + '</td>' +
+          '<td>' + (mentor.industry || '') + '</td>' +
+          '<td>' + (mentor.major || 'Not specified') + '</td>' +
+          '<td>' + (mentor.company || '') + '</td>' +
+          '<td>' + mentor.availableSlots + '</td>' +
+          '<td>' + actionBtn + '</td>';
+        tbody.appendChild(row);
+      });
+    }
+
+    function getActionButton(mentor, safeName) {
+      if (bookedMentorNames.has(mentor.name)) {
+        return '<button class="booked-confirm-btn" onclick="markAsDone(\'' + safeName + '\')">' +
+               '<span class="slide-default">✓ Booked</span>' +
+               '<span class="slide-done">Done ✓</span>' +
+             '</button>';
+      }
+      if (isInCart(mentor.name)) {
+        return '<button class="incart-btn" onclick="removeFromCartByName(\'' + safeName + '\')">🛒 In Cart ✕</button>';
+      }
+      if (mentor.availableSlots <= 0) {
+        return '<button class="full-btn">Full</button>';
+      }
+      return '<button class="book-btn" onclick="addToCart(\'' + safeName + '\')">+ Add to Cart</button>';
+    }
+
+    // ── 6. CART LOGIC ────────────────────────────────────────────────────────
+    function isInCart(name) {
+      return cartMentors.some(function(m) { return m.name === name; });
+    }
+
+		function addToCart(mentorName) {
+		var mentor = allMentors.find(function(m) { return m.name === mentorName; });
+			if (!mentor) return;
+			if (isInCart(mentorName)) { openCartDrawer(); return; }
+			if (bookedMentorNames.has(mentorName)) return;
+
+		// Enforce single-mentor cart: replace instead of accumulate
+			if (cartMentors.length > 0) {
+			var existingName = cartMentors[0].name;
+			var confirmed = confirm("You already have " + existingName + " in your cart. Replace with " + mentorName + "?");
+			if (!confirmed) { openCartDrawer(); return; }
+		}
+		cartMentors = [mentor]; // always exactly one item
+
+		updateCartBadge();
+		renderCartDrawer();
+		displayMentors(getCurrentFilteredMentors());
+		openCartDrawer();
+		}
+	
+	
+	
+	/*function addToCart(mentorName) {
+      var mentor = allMentors.find(function(m) { return m.name === mentorName; });
+      if (!mentor) return;
+      if (isInCart(mentorName)) { openCartDrawer(); return; }
+      if (bookedMentorNames.has(mentorName)) return;
+      cartMentors.push(mentor);
+      updateCartBadge();
+      renderCartDrawer();
+      displayMentors(getCurrentFilteredMentors());
+      // Brief visual feedback
+      openCartDrawer();
+    }*/
+
+    function addToCartFromProfile() {
+	if (!currentProfile) return;
+	var name = currentProfile.name;
+
+	if (!isInCart(name) && !bookedMentorNames.has(name) && currentProfile.availableSlots > 0) {
+    if (cartMentors.length > 0) {
+      var existingName = cartMentors[0].name;
+      var confirmed = confirm("You already have " + existingName + " in your cart. Replace with " + name + "?");
+      if (!confirmed) { closeProfileModal(); openCartDrawer(); return; }
+    }
+    cartMentors = [currentProfile]; // always exactly one item
+    updateCartBadge();
+    renderCartDrawer();
+    displayMentors(getCurrentFilteredMentors());
+	}
+	closeProfileModal();
+	openCartDrawer();
+	}
+
+    function removeFromCartByName(mentorName) {
+      cartMentors = cartMentors.filter(function(m) { return m.name !== mentorName; });
+      updateCartBadge();
+      renderCartDrawer();
+      displayMentors(getCurrentFilteredMentors());
+    }
+
+    function updateCartBadge() {
+      var badge = document.getElementById("cartBadge");
+      badge.textContent = cartMentors.length;
+      badge.style.display = cartMentors.length === 0 ? "none" : "flex";
+    }
+
+    function renderCartDrawer() {
+      var body = document.getElementById("cartDrawerBody");
+      if (cartMentors.length === 0) {
+        body.innerHTML = '<div class="cart-empty"><div class="cart-empty-icon">🛒</div><p>Your cart is empty.<br>Add mentors from the table!</p></div>';
+        return;
+      }
+      body.innerHTML = cartMentors.map(function(mentor, i) {
+        var safeName = mentor.name.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        return '<div class="cart-item" id="cart-item-' + i + '">' +
+          '<div class="cart-item-order">' + (i + 1) + '</div>' +
+          '<div class="cart-item-content">' +
+            '<div class="cart-item-name">' + mentor.name + '</div>' +
+            '<div class="cart-item-meta">' + (mentor.company || '') + ' · ' + (mentor.industry || '') + '</div>' +
+            '<div class="cart-item-slots">🟢 ' + mentor.availableSlots + ' slot(s) available</div>' +
+            '<div class="cart-item-actions">' +
+              '<button class="cart-book-btn" onclick="openBookingModalFromCart(\'' + safeName + '\')">✅ Confirm Booking</button>' +
+              '<button class="cart-remove-btn" onclick="removeFromCartByName(\'' + safeName + '\')">✕ Remove</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function openCartDrawer() {
+      renderCartDrawer();
+      document.getElementById("cartDrawer").classList.add("open");
+      document.getElementById("cartOverlay").style.display = "block";
+    }
+
+    function closeCartDrawer() {
+      document.getElementById("cartDrawer").classList.remove("open");
+      document.getElementById("cartOverlay").style.display = "none";
+    }
+
+    // ── 7. Booking Modal ─────────────────────────────────────────────────────
+    function openBookingModalFromCart(mentorName) {
+      closeCartDrawer();
+      var mentor = cartMentors.find(function(m) { return m.name === mentorName; });
+      if (!mentor) return;
+      selectedMentor = mentorName;
+      document.getElementById("modalMentorName").textContent = mentorName;
+      document.getElementById("modalUserEmail").textContent = currentUserEmail;
+      document.getElementById("bookingMessage").innerHTML = "";
+      document.getElementById("modalButtons").style.display = "flex";
+      var confirmBtn = document.querySelector(".confirm-btn");
+      var cancelBtn  = document.querySelector(".cancel-btn");
+      if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = "Yes, Book Session"; }
+      if (cancelBtn)  { cancelBtn.disabled = false; }
+      document.getElementById("bookingModal").style.display = "block";
+    }
+
+    function confirmBooking() {
+      if (!selectedMentor) return;
+      var confirmBtn = document.querySelector(".confirm-btn");
+      var cancelBtn  = document.querySelector(".cancel-btn");
+      if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = "Booking..."; }
+      if (cancelBtn)  { cancelBtn.disabled = true; }
+      var messageDiv = document.getElementById("bookingMessage");
+      messageDiv.innerHTML = '<div class="loading-container"><div class="loader"></div><p>Booking your session...</p></div>';
+
+      callGAS("bookSlot", { mentor: selectedMentor, email: currentUserEmail })
+        .then(function(result) {
+          if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = "Yes, Book Session"; }
+          if (cancelBtn)  { cancelBtn.disabled = false; }
+          if (result.success) {
+            // Mark as booked, remove from cart
+            bookedMentorNames.add(selectedMentor);
+            removeFromCartByName(selectedMentor);
+            messageDiv.innerHTML = '<div class="success-message">' + result.message + '</div>';
+            document.getElementById("modalButtons").style.display = "none";
+            messageDiv.innerHTML +=
+              '<div style="text-align:center;margin-top:20px;padding:15px;background:#f0fdf4;border-radius:8px;border:1px solid #22c55e;">' +
+              '<p style="color:#047857;margin-bottom:10px;font-weight:500;">🎉 Congratulations! Check your email for mentor details.</p>' +
+              '<button onclick="closeModal()" style="background:#059669;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-weight:500;">Close</button>' +
+              '</div>';
+            // Refresh mentor list to reflect updated slot count
+            loadMentors();
+          } else {
+            messageDiv.innerHTML = '<div class="error-message">' + result.message + '</div>';
+          }
+        })
+        .catch(function(error) {
+          if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = "Yes, Book Session"; }
+          if (cancelBtn)  { cancelBtn.disabled = false; }
+          document.getElementById("bookingMessage").innerHTML = '<div class="error-message">Booking failed: ' + error + '</div>';
+        });
+    }
+
+    function closeModal() {
+      document.getElementById("bookingModal").style.display = "none";
+      document.getElementById("bookingMessage").innerHTML = "";
+      document.getElementById("modalButtons").style.display = "flex";
+      selectedMentor = null;
+    }
+
+    // ── 8. Mentor Profile ────────────────────────────────────────────────────
+    function showMentorProfile(mentorName) {
+      document.getElementById("profileModal").style.display = "block";
+      document.getElementById("profileName").textContent = "Loading...";
+      document.getElementById("profileCompany").textContent = "";
+      document.getElementById("profileLoadingState").classList.add("hidden");
+      document.getElementById("profileSkeleton").classList.remove("hidden");
+      document.getElementById("profileContent").classList.add("hidden");
+
+      callGAS("getMentorProfile", { mentorName: mentorName, email: currentUserEmail })
+        .then(function(profile) {
+          currentProfile = profile;
+          document.getElementById("profileSkeleton").classList.add("hidden");
+          document.getElementById("profileContent").classList.remove("hidden");
+          displayMentorProfile(profile);
+        })
+        .catch(function() {
+          document.getElementById("profileSkeleton").classList.add("hidden");
+          document.getElementById("profileLoadingState").classList.remove("hidden");
+          document.querySelector("#profileLoadingState h4").textContent = "Failed to Load";
+          document.querySelector("#profileLoadingState p").textContent = "Please try again";
+          document.querySelector(".profile-loading-spinner").style.display = "none";
+          setTimeout(function() { closeProfileModal(); }, 2000);
+        });
+    }
+
+    function displayMentorProfile(mentor) {
+      document.getElementById("profileName").textContent = mentor.name || "Unknown";
+      document.getElementById("profileCompany").textContent = mentor.company || "Company not specified";
+      document.getElementById("profileSlots").textContent = mentor.availableSlots || 0;
+      document.getElementById("profileBooked").textContent = mentor.signedUpStudents ? mentor.signedUpStudents.length : 0;
+      document.getElementById("profileFocus").textContent = mentor.areaOfFocus || "Not specified";
+      document.getElementById("profileIndustry").textContent = mentor.industry || "Not specified";
+      document.getElementById("profileCompanyDetail").textContent = mentor.company || "Not specified";
+      var majorSection = document.getElementById("profileMajorSection");
+      if (mentor.major && mentor.major.trim() && mentor.major.trim() !== "") {
+        document.getElementById("profileMajor").textContent = mentor.major;
+        majorSection.style.display = "block";
+      } else { majorSection.style.display = "none"; }
+      var linkedInSection = document.getElementById("profileLinkedInSection");
+      if (mentor.linkedinUrl && mentor.linkedinUrl.trim()) {
+        document.getElementById("profileLinkedIn").href = mentor.linkedinUrl;
+        linkedInSection.style.display = "block";
+      } else { linkedInSection.style.display = "none"; }
+      var additionalSection = document.getElementById("profileAdditionalSection");
+      if (mentor.additionalInfo && mentor.additionalInfo.trim()) {
+        document.getElementById("profileAdditional").textContent = mentor.additionalInfo;
+        additionalSection.style.display = "block";
+      } else { additionalSection.style.display = "none"; }
+
+      // Profile book button
+      var bookBtn = document.getElementById("profileBookBtn");
+      if (bookedMentorNames.has(mentor.name)) {
+        bookBtn.innerHTML = '<span class="slide-default">✓ Booked</span><span class="slide-done">Done ✓</span>';
+        bookBtn.disabled = false; bookBtn.style.background = "#22c55e";
+        bookBtn.className = "profile-book-btn booked-confirm-btn";
+        bookBtn.onclick = function() { var n = mentor.name; closeProfileModal(); markAsDone(n); };
+      } else if (isInCart(mentor.name)) {
+        bookBtn.textContent = "🛒 In Cart"; bookBtn.disabled = false; bookBtn.style.background = "#f59e0b";
+      } else if (mentor.availableSlots <= 0) {
+        bookBtn.textContent = "Full - No Slots"; bookBtn.disabled = true; bookBtn.style.background = "#9ca3af";
+      } else {
+        bookBtn.textContent = "Add to Cart"; bookBtn.disabled = false; bookBtn.style.background = "#059669";
+      }
+    }
+
+    function closeProfileModal() {
+      document.getElementById("profileModal").style.display = "none";
+      currentProfile = null;
+      document.getElementById("profileLoadingState").classList.add("hidden");
+      document.getElementById("profileSkeleton").classList.add("hidden");
+      document.getElementById("profileContent").classList.add("hidden");
+      document.querySelector("#profileLoadingState h4").textContent = "Loading Profile...";
+      document.querySelector("#profileLoadingState p").textContent = "Getting mentor details";
+      document.querySelector(".profile-loading-spinner").style.display = "block";
+    }
+
+    // ── 10. Mark Booking as Done ─────────────────────────────────────────────
+    function markAsDone(mentorName) {
+      if (!confirm('Mark your session with "' + mentorName + '" as Done?\n\nYou can rebook later if slots are available.')) return;
+      callGAS("markBookingDone", { mentor: mentorName, email: currentUserEmail })
+        .then(function(result) {
+          if (result.success) {
+            bookedMentorNames.delete(mentorName);
+            displayMentors(getCurrentFilteredMentors());
+            alert('\u2705 Marked as Done! You can rebook this mentor if slots are available.');
+          } else {
+            alert('Could not mark as done: ' + result.message);
+          }
+        })
+        .catch(function(error) {
+          alert('Error: ' + error);
+        });
+    }
+
+    // ── 9. Filters ───────────────────────────────────────────────────────────
+    function getCurrentFilteredMentors() {
+      var nameQuery      = document.getElementById("searchName").value.toLowerCase();
+      var companyQuery   = document.getElementById("searchCompany").value.toLowerCase();
+      var selIndustry    = document.getElementById("filterIndustry").value;
+      var selMajor       = document.getElementById("filterMajor").value;
+      return allMentors.filter(function(m) {
+        return (!nameQuery    || m.name.toLowerCase().includes(nameQuery)) &&
+               (!companyQuery || m.company.toLowerCase().includes(companyQuery)) &&
+               (!selIndustry  || m.industry === selIndustry) &&
+               (!selMajor     || m.major === selMajor);
+      });
+    }
+
+    function filterMentors() { displayMentors(getCurrentFilteredMentors()); }
+
+    function populateFilters() {
+      var industries = Array.from(new Set(allMentors.map(function(m) { return m.industry; }).filter(Boolean)));
+      var filterIndustry = document.getElementById("filterIndustry");
+      filterIndustry.innerHTML = "<option value=''>All Industries</option>";
+      industries.forEach(function(i) {
+        var o = document.createElement("option"); o.value = i; o.textContent = i; filterIndustry.appendChild(o);
+      });
+      var majors = Array.from(new Set(allMentors.map(function(m) { return m.major; })
+        .filter(function(major) { return major && major.trim() && major.trim().toLowerCase() !== "n/a" && major.trim().toLowerCase() !== "na" && major.trim().length > 2; }))).sort();
+      var filterMajor = document.getElementById("filterMajor");
+      filterMajor.innerHTML = "<option value=''>All Majors</option>";
+      majors.forEach(function(major) {
+        var o = document.createElement("option"); o.value = major; o.textContent = major; filterMajor.appendChild(o);
+      });
+    }
+
+    window.onload = initializeApp;
+  </script>
+</body>
+</html>
