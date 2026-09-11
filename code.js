@@ -77,7 +77,7 @@ function doPost(e) {
       result = verifyCodeAndAuthenticate(data.email, data.code);
 
     } else if (action === "getMentors") {
-      result = getCachedMentorData(data.email);
+      result = getCachedMentorData();
 
     } else if (action === "checkUserBookingStatus") {
       result = checkUserBookingStatus(data.email);
