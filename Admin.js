@@ -268,24 +268,19 @@ function removeStudentFromMentor(mentorName, studentEmail) {
 // Add a student to a mentor manually (admin function)
 function addStudentToMentor(mentorName, studentEmail) {
   try {
-    // Validate email format
     var emailValidation = validateVCUEmail(studentEmail);
     if (!emailValidation.valid) {
-      return {
-        success: false,
-        message: emailValidation.message
-      };
+      return { success: false, message: emailValidation.message };
     }
-    
+
     var validEmail = emailValidation.email;
     var data = adminSheet.getDataRange().getValues();
     var headers = data[0];
-    
+
     var nameIdx = headers.indexOf("First Name & Last Name");
     var slotIdx = headers.indexOf("Available Slots");
     var signupIdx = headers.indexOf("Signed-Up Students");
-    
-    // Find alternative slots column if needed
+
     if (slotIdx === -1) {
       for (var i = 0; i < headers.length; i++) {
         var header = headers[i].trim();
@@ -295,72 +290,44 @@ function addStudentToMentor(mentorName, studentEmail) {
         }
       }
     }
-    
-    // // Check if student is already booked with ANY mentor
-    // for (var i = 1; i < data.length; i++) {
-    //   var signedUp = data[i][signupIdx] || "";
-    //   if (signedUp.split(",").map(e => e.trim()).includes(validEmail)) {
-    //     return {
-    //       success: false,
-    //       message: `${validEmail} is already booked with ${data[i][nameIdx]}`
-    //     };
-    //   }
-    // }
-    // Count how many mentors the student has booked
+
     var studentBookingCount = 0;
     for (var i = 1; i < data.length; i++) {
-      var signedUp = data[i][indexes.signedUp] || "";
+      var signedUp = data[i][signupIdx] || "";
       var signedUpList = signedUp.split(",").map(function(e) { return e.trim(); });
-      if (signedUpList.indexOf(studentEmail) !== -1) {
+      if (signedUpList.indexOf(validEmail) !== -1) {
         studentBookingCount++;
       }
     }
     if (studentBookingCount >= 2) {
-      return { 
-        success: false, 
-        message: "You have already booked sessions with two mentors. Each student can book up to 2 mentors only." 
+      return {
+        success: false,
+        message: "This student has already booked sessions with two mentors. Each student can book up to 2 mentors only."
       };
     }
 
-    
-    // Find the specific mentor and add student
     for (var i = 1; i < data.length; i++) {
       if (data[i][nameIdx] === mentorName) {
         var availableSlots = parseInt(data[i][slotIdx]) || 0;
-        
+
         if (availableSlots <= 0) {
-          return {
-            success: false,
-            message: "This mentor has no available slots"
-          };
+          return { success: false, message: "This mentor has no available slots" };
         }
-        
-        // Add the student
+
         var currentStudents = data[i][signupIdx] || "";
         var updatedStudents = currentStudents + (currentStudents ? ", " : "") + validEmail;
         adminSheet.getRange(i + 1, signupIdx + 1).setValue(updatedStudents);
-        
-        // Decrease available slots
         adminSheet.getRange(i + 1, slotIdx + 1).setValue(availableSlots - 1);
-        
-        return {
-          success: true,
-          message: `Successfully added ${validEmail} to ${mentorName}`
-        };
+
+        return { success: true, message: "Successfully added " + validEmail + " to " + mentorName };
       }
     }
-    
-    return {
-      success: false,
-      message: "Mentor not found"
-    };
-    
+
+    return { success: false, message: "Mentor not found" };
+
   } catch (error) {
     console.error("Error in addStudentToMentor:", error);
-    return {
-      success: false,
-      message: "Failed to add student: " + error.message
-    };
+    return { success: false, message: "Failed to add student: " + error.message };
   }
 }
 

@@ -13,18 +13,28 @@ function doGet(e) {
   // API calls from Netlify frontend
   if (action) {
     var result;
-
+	try{
     if (action === "getMentors") {
-      result = getCachedMentorData(e.parameter.email);
+      result = getCachedMentorData();
     } else if (action === "checkUserBookingStatus") {
       result = checkUserBookingStatus(e.parameter.email);
     } else if (action === "getMentorProfile") {
       result = getMentorProfile(e.parameter.mentorName, e.parameter.email);
     } else if (action === "bookSlot") {
       result = bookSlot(e.parameter.mentorName, e.parameter.email);
-    } else {
+    }
+	 else if (action === "addStudentToMentor") {
+		result = addStudentToMentor(data.mentorName, data.email);
+
+	} else if (action === "removeStudentFromMentor") {
+		result = removeStudentFromMentor(data.mentorName, data.email);
+	}
+	else {
       result = { error: "Unknown action" };
     }
+	} catch (err) {
+		result = {error: "Server error:" + err.message};
+	}
     
 
     return ContentService
@@ -82,6 +92,13 @@ function doPost(e) {
     else if (action === "markBookingDone") {
        result = markBookingDone(data);
     }
+	else if (action === "addStudentToMentor") {
+       result = addStudentToMentor(data.mentorName, data.email);
+
+	} else if (action === "removeStudentFromMentor") {
+       result = removeStudentFromMentor(data.mentorName, data.email);
+
+	}
      else {
       result = { error: "Unknown action: " + action };
     }

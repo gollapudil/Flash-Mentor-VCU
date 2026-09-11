@@ -896,7 +896,7 @@
   const webAppUrl = "https://script.google.com/macros/s/AKfycbw-JPye5itKs5r-qdx8kOw8ZnZ0YwcOulc1UnztyPk4h_VLWJ7pcfy8lpLjaziZMXzHFA/exec";
 
   // Use standard fetch instead of google.script.run
-  fetch(webAppUrl + "?action=getMentors")
+  fetch(webAppUrl + "?action=getAdminOverview")
     .then(response => {
       if (!response.ok) {
         throw new Error("Network response was not ok");
@@ -1085,137 +1085,177 @@
 
     // Admin actions
     function addStudent() {
-      const email = document.getElementById("newStudentEmail").value.trim();
-      if (!email) {
-        showMessage("Please enter a student email", "error");
-        return;
+  const email = document.getElementById("newStudentEmail").value.trim();
+  if (!email) {
+    showMessage("Please enter a student email", "error");
+    return;
+  }
+  if (!currentMentor) {
+    showMessage("No mentor selected", "error");
+    return;
+  }
+
+  const addBtn = document.querySelector('#newStudentEmail + button');
+  const originalText = addBtn.textContent;
+  addBtn.disabled = true;
+  addBtn.textContent = "Adding...";
+
+  fetch(webAppUrl, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({
+      action: "addStudentToMentor",
+      mentorName: currentMentor.name,
+      email: email
+    })
+  })
+    .then(response => response.json())
+    .then(result => {
+      addBtn.disabled = false;
+      addBtn.textContent = originalText;
+      if (result.success) {
+        showMessage(`✅ Added ${email} to ${currentMentor.name}`);
+        document.getElementById("newStudentEmail").value = "";
+        refreshData();
+        showMentorModal(currentMentor.name);
+      } else {
+        showMessage("Failed to add student: " + result.message, "error");
       }
+    })
+    .catch(error => {
+      addBtn.disabled = false;
+      addBtn.textContent = originalText;
+      showMessage("Error adding student: " + error.message, "error");
+    });
+}
 
-      if (!currentMentor) {
-        showMessage("No mentor selected", "error");
-        return;
-      }
+function removeStudent(email) {
+  if (!currentMentor) {
+    showMessage("No mentor selected", "error");
+    return;
+  }
 
-      // Show loading in the button
-      const addBtn = document.querySelector('#newStudentEmail + button');
-      const originalText = addBtn.textContent;
-      addBtn.disabled = true;
-      addBtn.textContent = "Adding...";
-
-      google.script.run
-        .withSuccessHandler(function(result) {
-          addBtn.disabled = false;
-          addBtn.textContent = originalText;
-          
+  showConfirmModal(
+    "Remove Student",
+    `Remove ${email} from ${currentMentor.name}?`,
+    "Remove",
+    function() {
+      fetch(webAppUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "removeStudentFromMentor",
+          mentorName: currentMentor.name,
+          email: email
+        })
+      })
+        .then(response => response.json())
+        .then(result => {
           if (result.success) {
-            showMessage(`✅ Added ${email} to ${currentMentor.name}`);
-            document.getElementById("newStudentEmail").value = "";
-            refreshData(); // Reload data
-            showMentorModal(currentMentor.name); // Refresh modal
+            showMessage(`✅ Removed ${email} from ${currentMentor.name}`);
+            refreshData();
+            showMentorModal(currentMentor.name);
           } else {
-            showMessage("Failed to add student: " + result.message, "error");
+            showMessage("Failed to remove student: " + result.message, "error");
           }
         })
-        .withFailureHandler(function(error) {
-          addBtn.disabled = false;
-          addBtn.textContent = originalText;
-          showMessage("Error adding student: " + error, "error");
-        })
-        .addStudentToMentor(currentMentor.name, email);
+        .catch(error => {
+          showMessage("Error removing student: " + error.message, "error");
+        });
     }
+  );
+}
 
-    function removeStudent(email) {
-      if (!currentMentor) {
-        showMessage("No mentor selected", "error");
-        return;
-      }
-
-      showConfirmModal(
-        "Remove Student",
-        `Remove ${email} from ${currentMentor.name}?`,
-        "Remove",
-        function() {
-          google.script.run
-            .withSuccessHandler(function(result) {
-              if (result.success) {
-                showMessage(`✅ Removed ${email} from ${currentMentor.name}`);
-                refreshData(); // Reload data
-                showMentorModal(currentMentor.name); // Refresh modal
-              } else {
-                showMessage("Failed to remove student: " + result.message, "error");
-              }
-            })
-            .withFailureHandler(function(error) {
-              showMessage("Error removing student: " + error, "error");
-            })
-            .removeStudentFromMentor(currentMentor.name, email);
-        }
-      );
-    }
+    
 
     function removeAllStudents() {
-      if (!currentMentor) {
-        showMessage("No mentor selected", "error");
-        return;
-      }
+  if (!currentMentor) {
+    showMessage("No mentor selected", "error");
+    return;
+  }
+  if (!currentMentor.signedUpStudents || currentMentor.signedUpStudents.length === 0) {
+    showMessage("No students to remove", "error");
+    return;
+  }
 
-      if (!currentMentor.signedUpStudents || currentMentor.signedUpStudents.length === 0) {
-        showMessage("No students to remove", "error");
-        return;
-      }
+  const studentCount = currentMentor.signedUpStudents.length;
 
-      const studentCount = currentMentor.signedUpStudents.length;
-      showConfirmModal(
-        "Remove All Students",
-        `Remove ALL ${studentCount} students from ${currentMentor.name}? This action cannot be undone.`,
-        "Remove All",
-        function() {
-          // Remove each student
-          const students = [...currentMentor.signedUpStudents]; // Copy array
-          let removedCount = 0;
-          
-          students.forEach(function(email) {
-            google.script.run
-              .withSuccessHandler(function(result) {
-                removedCount++;
-                if (removedCount === students.length) {
-                  showMessage(`✅ Removed all ${students.length} students from ${currentMentor.name}`);
-                  refreshData();
-                  showMentorModal(currentMentor.name);
-                }
-              })
-              .withFailureHandler(function(error) {
-                console.error("Error removing student:", email, error);
-              })
-              .removeStudentFromMentor(currentMentor.name, email);
-          });
+  showConfirmModal(
+    "Remove All Students",
+    `Remove ALL ${studentCount} students from ${currentMentor.name}? This action cannot be undone.`,
+    "Remove All",
+    function() {
+      const students = [...currentMentor.signedUpStudents]; // copy array
+      const mentorName = currentMentor.name;
+
+      // Remove students one at a time, in sequence, to avoid race conditions
+      function removeNext(index) {
+        if (index >= students.length) {
+          showMessage(`✅ Removed all ${students.length} students from ${mentorName}`);
+          refreshData();
+          showMentorModal(mentorName);
+          return;
         }
-      );
+
+        const email = students[index];
+        fetch(webAppUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "removeStudentFromMentor",
+            mentorName: mentorName,
+            email: email
+          })
+        })
+          .then(response => response.json())
+          .then(result => {
+            if (!result.success) {
+              console.error("Failed to remove student:", email, result.message);
+            }
+            removeNext(index + 1);
+          })
+          .catch(error => {
+            console.error("Error removing student:", email, error);
+            removeNext(index + 1);
+          });
+      }
+
+      removeNext(0);
     }
+  );
+}
 
     // Quick actions from table
     function removeStudentQuick(mentorName, studentEmail) {
-      showConfirmModal(
-        "Remove Student",
-        `Remove ${studentEmail} from ${mentorName}?`,
-        "Remove",
-        function() {
-          google.script.run
-            .withSuccessHandler(function(result) {
-              if (result.success) {
-                showMessage(`✅ Removed ${studentEmail} from ${mentorName}`);
-                refreshData();
-              } else {
-                showMessage("Failed to remove student: " + result.message, "error");
-              }
-            })
-            .withFailureHandler(function(error) {
-              showMessage("Error removing student: " + error, "error");
-            })
-            .removeStudentFromMentor(mentorName, studentEmail);
-        }
-      );
+  showConfirmModal(
+    "Remove Student",
+    `Remove ${studentEmail} from ${mentorName}?`,
+    "Remove",
+    function() {
+      fetch(webAppUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "removeStudentFromMentor",
+          mentorName: mentorName,
+          email: studentEmail
+        })
+      })
+        .then(response => response.json())
+        .then(result => {
+          if (result.success) {
+            showMessage(`✅ Removed ${studentEmail} from ${mentorName}`);
+            refreshData();
+          } else {
+            showMessage("Failed to remove student: " + result.message, "error");
+          }
+        })
+        .catch(error => {
+          showMessage("Error removing student: " + error.message, "error");
+        });
     }
+  );
+}
 
     // Filtering
     function filterTable() {

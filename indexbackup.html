@@ -405,7 +405,7 @@ function setupActivityTracking() {
   resetActivityTimer();
 }
 // ────────────────────────────────────────────────────────────
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbw-JPye5itKs5r-qdx8kOw8ZnZ0YwcOulc1UnztyPk4h_VLWJ7pcfy8lpLjaziZMXzHFA/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzzQO5XGHePy1oZtLSCRi6c_N3SmKmbJQorpALSrzrHMwNIXhN_MP-mgcsxg9rxpKM-/exec";
 
     function callGAS(action, params) {
       var body = JSON.stringify(Object.assign({ action: action }, params || {}));
@@ -515,7 +515,7 @@ function setupActivityTracking() {
         .then(function(result) {
           if (result.success) {
             currentUserEmail = result.email;
-			//saveSession(result.email);  
+			saveSession(result.email);  
 			setupActivityTracking();
             showVerificationMessage("Verification successful! Loading mentors...", "success");
             setTimeout(function() { showMainApp(); loadMentors(); }, 1500);
@@ -635,29 +635,7 @@ function setupActivityTracking() {
       return cartMentors.some(function(m) { return m.name === name; });
     }
 
-		function addToCart(mentorName) {
-		var mentor = allMentors.find(function(m) { return m.name === mentorName; });
-			if (!mentor) return;
-			if (isInCart(mentorName)) { openCartDrawer(); return; }
-			if (bookedMentorNames.has(mentorName)) return;
-
-		// Enforce single-mentor cart: replace instead of accumulate
-			if (cartMentors.length > 0) {
-			var existingName = cartMentors[0].name;
-			var confirmed = confirm("You already have " + existingName + " in your cart. Replace with " + mentorName + "?");
-			if (!confirmed) { openCartDrawer(); return; }
-		}
-		cartMentors = [mentor]; // always exactly one item
-
-		updateCartBadge();
-		renderCartDrawer();
-		displayMentors(getCurrentFilteredMentors());
-		openCartDrawer();
-		}
-	
-	
-	
-	/*function addToCart(mentorName) {
+    function addToCart(mentorName) {
       var mentor = allMentors.find(function(m) { return m.name === mentorName; });
       if (!mentor) return;
       if (isInCart(mentorName)) { openCartDrawer(); return; }
@@ -668,26 +646,20 @@ function setupActivityTracking() {
       displayMentors(getCurrentFilteredMentors());
       // Brief visual feedback
       openCartDrawer();
-    }*/
+    }
 
     function addToCartFromProfile() {
-	if (!currentProfile) return;
-	var name = currentProfile.name;
-
-	if (!isInCart(name) && !bookedMentorNames.has(name) && currentProfile.availableSlots > 0) {
-    if (cartMentors.length > 0) {
-      var existingName = cartMentors[0].name;
-      var confirmed = confirm("You already have " + existingName + " in your cart. Replace with " + name + "?");
-      if (!confirmed) { closeProfileModal(); openCartDrawer(); return; }
+      if (!currentProfile) return;
+      var name = currentProfile.name;
+      if (!isInCart(name) && !bookedMentorNames.has(name) && currentProfile.availableSlots > 0) {
+        cartMentors.push(currentProfile);
+        updateCartBadge();
+        renderCartDrawer();
+        displayMentors(getCurrentFilteredMentors());
+      }
+      closeProfileModal();
+      openCartDrawer();
     }
-    cartMentors = [currentProfile]; // always exactly one item
-    updateCartBadge();
-    renderCartDrawer();
-    displayMentors(getCurrentFilteredMentors());
-	}
-	closeProfileModal();
-	openCartDrawer();
-	}
 
     function removeFromCartByName(mentorName) {
       cartMentors = cartMentors.filter(function(m) { return m.name !== mentorName; });
