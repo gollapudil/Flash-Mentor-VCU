@@ -572,7 +572,7 @@ function setupActivityTracking() {
     function loadMentors() {
       document.getElementById("loadingState").classList.remove("hidden");
       document.getElementById("mentorsTable").classList.add("hidden");
-      callGAS("getMentors", { email: currentUserEmail })
+      callGAS("getMentors")
         .then(function(mentors) {
           allMentors = mentors;
           // Seed bookedMentorNames from server-side isBookedByCurrentUser flag
