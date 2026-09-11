@@ -1,728 +1,586 @@
-// AdminCode.gs - All admin-related functions
-// Admin password = vcu2026admin
-// This file handles the admin dashboard functionality
 
-// Get the same spreadsheet reference as the main code
-var adminSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Form Responses 1");
 
-// Simple admin authentication
-function authenticateAdmin(password) {
+var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Mentors"); // ← CONFIRM this matches Admin.js's adminSheet tab name
+
+// Cache for column indexes to avoid repeated searches
+var columnIndexCache = null;
+var lastDataTimestamp = null;
+var cachedMentorData = null;
+
+function doGet(e) {
+  var action = e && e.parameter ? e.parameter.action : null;
+  var page   = e && e.parameter ? e.parameter.page   : null;
+
+  if (action) {
+    var result;
+    try {
+      if (action === "getMentors") {
+        result = { mentors: getCachedMentorData() };
+
+      } else if (action === "getAdminOverview") {
+        // NEW: proper admin dashboard data (stats + mentors), from Admin.js
+        result = getAdminOverview();
+
+      } else if (action === "checkUserBookingStatus") {
+        result = checkUserBookingStatus(e.parameter.email);
+
+      } else if (action === "getMentorProfile") {
+        result = getMentorProfile(e.parameter.mentorName, e.parameter.email);
+
+      } else if (action === "bookSlot") {
+        result = bookSlot(e.parameter.mentorName, e.parameter.email);
+
+      } else if (action === "addStudentToMentor") {
+        // FIXED: was using undefined "data" — now uses e.parameter (this is doGet, not doPost)
+        result = addStudentToMentor(e.parameter.mentorName, e.parameter.email);
+
+      } else if (action === "removeStudentFromMentor") {
+        // FIXED: was using undefined "data" — now uses e.parameter
+        result = removeStudentFromMentor(e.parameter.mentorName, e.parameter.email);
+
+      } else {
+        result = { error: "Unknown action" };
+      }
+    } catch (err) {
+      result = { error: "Server error: " + err.message };
+    }
+
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Fallback: still serve admin HTML if needed
+  if (page === 'admin') {
+    return HtmlService.createHtmlOutputFromFile('admin')
+      .setTitle("VCU Admin Dashboard - Mentor Management")
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  // Default fallback (won't be used once Netlify is live)
+  return HtmlService.createHtmlOutputFromFile('index')
+    .setTitle("VCU Engineering Alternate Assignment Career Conversation")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function doPost(e) {
+  // Parse JSON body sent by callGAS() in index.html / admin.html
+  var data = {};
   try {
-    // Updated admin password
-    const adminPassword = "vcu2026admin";
-    
-    if (password === adminPassword) {
+    data = JSON.parse(e.postData.contents);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ error: "Invalid JSON: " + err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var action = data.action;
+  var result;
+
+  try {
+    if (action === "sendVerificationCode") {
+      result = sendVerificationCode(data.email);
+
+    } else if (action === "verifyCodeAndAuthenticate") {
+      result = verifyCodeAndAuthenticate(data.email, data.code);
+
+    } else if (action === "getMentors") {
+      result = { mentors: getCachedMentorData() };
+
+    } else if (action === "getAdminOverview") {
+      // NEW: proper admin dashboard data (stats + mentors), from Admin.js
+      result = getAdminOverview();
+
+    } else if (action === "checkUserBookingStatus") {
+      result = checkUserBookingStatus(data.email);
+
+    } else if (action === "getMentorProfile") {
+      result = getMentorProfile(data.mentorName, data.email);
+
+    } else if (action === "bookSlot") {
+      result = bookSlot(data.mentor, data.email); // ← note: "mentor" not "mentorName"
+
+    } else if (action === "markBookingDone") {
+      result = markBookingDone(data);
+
+    } else if (action === "addStudentToMentor") {
+      result = addStudentToMentor(data.mentorName, data.email);
+
+    } else if (action === "removeStudentFromMentor") {
+      result = removeStudentFromMentor(data.mentorName, data.email);
+
+    } else {
+      result = { error: "Unknown action: " + action };
+    }
+
+  } catch (err) {
+    result = { error: "Server error: " + err.message };
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Generate random verification code
+function generateVerificationCode() {
+  return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
+}
+
+// Validate VCU email format
+function validateVCUEmail(email) {
+  if (!email || typeof email !== 'string') {
+    return { valid: false, message: "Please enter an email address." };
+  }
+  email = email.trim().toLowerCase();
+
+  var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return { valid: false, message: "Please enter a valid email address." };
+  }
+
+  if (!email.endsWith("@vcu.edu")) {
+    return { valid: false, message: "Only VCU students with @vcu.edu email addresses can access this system." };
+  }
+
+  return { valid: true, email: email };
+}
+
+// Send verification code to email
+function sendVerificationCode(email) {
+  try {
+    var validation = validateVCUEmail(email);
+    if (!validation.valid) {
+      return { success: false, message: validation.message };
+    }
+
+    var validEmail = validation.email;
+    var verificationCode = generateVerificationCode();
+
+    var expirationTime = new Date().getTime() + (10 * 60 * 1000); // 10 minutes
+    PropertiesService.getScriptProperties().setProperty(
+      'verification_' + validEmail,
+      JSON.stringify({
+        code: verificationCode,
+        expires: expirationTime
+      })
+    );
+
+    var emailSubject = "VCU Engineering Alternate Assignment Career Conversation - Verification Code";
+    var emailBody = "Dear VCU Student,\n\nYour verification code for VCU Engineering Alternate Assignment Career Conversation is:\n\n🔐 VERIFICATION CODE: " + verificationCode + "\n\nThis code will expire in 10 minutes. Please enter this code on the website to access the mentor booking system.\n\nIf you did not request this code, please ignore this email.\n\nBest regards,\nVCU College of Engineering Career Services Team\n\n---\nThis is an automated message. Please do not reply to this email.";
+
+    try {
+      // NOTE: to send from a department alias (e.g. engg@vcu.edu), add:
+      // from: "engg@vcu.edu", name: "VCU Engineering Career Services"
+      // — but only after that alias is verified under "Send mail as" in Gmail settings.
+      MailApp.sendEmail({
+        to: validEmail,
+        subject: emailSubject,
+        body: emailBody
+      });
+
       return {
         success: true,
-        message: "Admin access granted"
+        email: validEmail,
+        message: "Verification code sent! Check your email."
       };
-    } else {
+
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError);
       return {
         success: false,
-        message: "Invalid admin password"
+        message: "Failed to send verification email. Please check if your email address is correct."
       };
     }
+
   } catch (error) {
-    console.error("Admin auth error:", error);
+    console.error("Error in sendVerificationCode:", error);
     return {
       success: false,
-      message: "Authentication failed"
+      message: "Failed to send verification code. Please try again."
     };
   }
 }
 
-// Get overview data for admin dashboard
-function getAdminOverview() {
+// Verify the code and authenticate user
+function verifyCodeAndAuthenticate(email, code) {
   try {
-    var data = adminSheet.getDataRange().getValues();
-    if (data.length <= 1) {
-      return {
-        totalMentors: 0,
-        totalBookings: 0,
-        availableSlots: 0,
-        mentors: []
-      };
+    var validation = validateVCUEmail(email);
+    if (!validation.valid) {
+      return { success: false, message: validation.message };
     }
-    
-    var headers = data[0];
-    console.log("Admin: Found headers:", headers);
-    
-    // Use the correct column mapping from your Excel file
-    var nameIdx = headers.indexOf("First Name & Last Name");
-    var areaOfFocusIdx = headers.indexOf("What is your area of focus?");
-    var industryIdx = headers.indexOf("Industry you can share about.");
-    
-    // Company column mapping
-    var companyIdx = headers.indexOf("Company");
-    if (companyIdx === -1) {
-      companyIdx = headers.indexOf("What company are you with or previously with?");
+
+    var validEmail = validation.email;
+
+    var verificationData = PropertiesService.getScriptProperties().getProperty('verification_' + validEmail);
+
+    if (!verificationData) {
+      return { success: false, message: "No verification code found. Please request a new code." };
     }
-    
-    // Try flexible matching for company column
-    if (companyIdx === -1) {
-      for (var i = 0; i < headers.length; i++) {
-        var header = headers[i].trim();
-        if (header === "What company are you with or previously with?") {
-          companyIdx = i;
-          break;
-        }
+
+    var parsedData = JSON.parse(verificationData);
+    var currentTime = new Date().getTime();
+
+    if (currentTime > parsedData.expires) {
+      PropertiesService.getScriptProperties().deleteProperty('verification_' + validEmail);
+      return { success: false, message: "Verification code has expired. Please request a new code." };
+    }
+
+    if (code.trim() !== parsedData.code) {
+      return { success: false, message: "Invalid verification code. Please check your email and try again." };
+    }
+
+    PropertiesService.getScriptProperties().deleteProperty('verification_' + validEmail);
+
+    var sessionId = Utilities.getUuid();
+    var sessionData = {
+      email: validEmail,
+      timestamp: new Date().getTime(),
+      verified: true
+    };
+
+    PropertiesService.getScriptProperties().setProperty('session_' + sessionId, JSON.stringify(sessionData));
+
+    return {
+      success: true,
+      email: validEmail,
+      sessionId: sessionId,
+      message: "Email verified successfully!"
+    };
+
+  } catch (error) {
+    console.error("Error in verifyCodeAndAuthenticate:", error);
+    return {
+      success: false,
+      message: "Verification failed. Please try again."
+    };
+  }
+}
+
+// Get and cache column indexes once
+function getColumnIndexes() {
+  if (columnIndexCache !== null) {
+    return columnIndexCache;
+  }
+  try {
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+    var indexes = {
+      name: headers.indexOf("First Name & Last Name"),
+      areaOfFocus: headers.indexOf("What is your area of focus?"),
+      industry: headers.indexOf("Industry you can share about."),
+      major: headers.indexOf("What was your major?"),
+      additionalInfo: headers.indexOf("Any other information about yourself that might be helpful to a student in determining whom to talk with? "),
+      linkedin: headers.indexOf("What is your LinkedIn Profile?"),
+      email: headers.indexOf("Email Address"),
+      preferredEmail: headers.indexOf("Preferred email address for students to use to contact you. This email will only be shared with the specific student(s) who sign up to talk with you. "),
+      company: headers.indexOf("Company"),
+      companyAlt: headers.indexOf("What company are you with or previously with?"),
+      slots: headers.indexOf("Available Slots"),
+      signedUp: headers.indexOf("Signed-Up Students"),
+      conversations: -1
+    };
+
+    if (indexes.email === -1) {
+      indexes.email = indexes.preferredEmail;
+    }
+
+    if (indexes.company === -1) {
+      indexes.company = indexes.companyAlt;
+    }
+
+    for (var i = 0; i < headers.length; i++) {
+      var header = headers[i].trim();
+      if (header.includes("How many conversations") && header.includes("would you be open to having")) {
+        indexes.conversations = i;
+        break;
       }
     }
-    
-    // Slots and signup columns
-    var slotIdx = headers.indexOf("Available Slots");
-    var signupIdx = headers.indexOf("Signed-Up Students");
-    
-    // Try alternative column names for slots
-    if (slotIdx === -1) {
-      for (var i = 0; i < headers.length; i++) {
-        var header = headers[i].trim();
-        if (header.includes("How many conversations") && header.includes("would you be open to having")) {
-          slotIdx = i;
-          break;
-        }
-      }
+
+    if (indexes.slots === -1 && indexes.conversations !== -1) {
+      indexes.slots = indexes.conversations;
     }
-    
-    // If Signed-Up Students column doesn't exist, add it
-    if (signupIdx === -1) {
-      console.log("Adding 'Signed-Up Students' column for admin...");
+
+    if (indexes.signedUp === -1) {
+      console.log("Adding 'Signed-Up Students' column...");
       var lastColumn = headers.length + 1;
-      adminSheet.getRange(1, lastColumn).setValue("Signed-Up Students");
-      signupIdx = lastColumn - 1;
-      
-      // Refresh data
-      data = adminSheet.getDataRange().getValues();
-      headers = data[0];
+      sheet.getRange(1, lastColumn).setValue("Signed-Up Students");
+      indexes.signedUp = lastColumn - 1;
     }
-    
-    console.log("Admin column mapping:", {
-      nameIdx: nameIdx,
-      companyIdx: companyIdx,
-      slotIdx: slotIdx,
-      signupIdx: signupIdx
-    });
-    
-    var mentors = [];
-    var totalBookings = 0;
-    var totalAvailableSlots = 0;
-    
-    // Process each mentor row
-    for (var i = 1; i < data.length; i++) {
-      var signedUpRaw = data[i][signupIdx] || "";
-      var signedUp = signedUpRaw ? signedUpRaw.split(",").map(e => e.trim()).filter(e => e !== "") : [];
-      var availableSlots = parseInt(data[i][slotIdx]) || 0;
-      
-      totalBookings += signedUp.length;
-      totalAvailableSlots += availableSlots;
-      
-      mentors.push({
-        name: data[i][nameIdx] || "",
-        areaOfFocus: data[i][areaOfFocusIdx] || "",
-        industry: data[i][industryIdx] || "",
-        company: data[i][companyIdx] || "",
-        availableSlots: availableSlots,
-        signedUpStudents: signedUp,
-        rowIndex: i + 1 // Store row index for updates later
-      });
-    }
-    
-    console.log(`Admin: Processed ${mentors.length} mentors, ${totalBookings} total bookings`);
-    
-    return {
-      totalMentors: mentors.length,
-      totalBookings: totalBookings,
-      availableSlots: totalAvailableSlots,
-      mentors: mentors
-    };
-    
+
+    columnIndexCache = indexes;
+    console.log("Column indexes cached:", indexes);
+    return indexes;
+
   } catch (error) {
-    console.error("Error in getAdminOverview:", error);
-    throw new Error("Failed to load admin data: " + error.message);
+    console.error("Error getting column indexes:", error);
+    throw new Error("Failed to map spreadsheet columns: " + error.message);
   }
 }
 
-// Get detailed information about a specific mentor for admin management
-function getAdminMentorDetails(mentorName) {
-  try {
-    var data = adminSheet.getDataRange().getValues();
-    var headers = data[0];
-    
-    // Get all column indexes using correct names from Excel file
-    var nameIdx = headers.indexOf("First Name & Last Name");
-    var areaOfFocusIdx = headers.indexOf("What is your area of focus?");
-    var industryIdx = headers.indexOf("Industry you can share about.");
-    var majorIdx = headers.indexOf("What was your major?");
-    var additionalInfoIdx = headers.indexOf("Any other information about yourself that might be helpful to a student in determining whom to talk with? ");
-    var linkedinIdx = headers.indexOf("What is your LinkedIn Profile?");
-    
-    // Company and email columns
-    var companyIdx = headers.indexOf("Company");
-    if (companyIdx === -1) {
-      companyIdx = headers.indexOf("What company are you with or previously with?");
-    }
-    
-    var emailIdx = headers.indexOf("Email Address");
-    if (emailIdx === -1) {
-      emailIdx = headers.indexOf("Preferred email address for students to use to contact you. This email will only be shared with the specific student(s) who sign up to talk with you. ");
-    }
-    
-    var slotIdx = headers.indexOf("Available Slots");
-    var signupIdx = headers.indexOf("Signed-Up Students");
-    
-    // Find the mentor
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][nameIdx] === mentorName) {
-        var signedUp = data[i][signupIdx] ? data[i][signupIdx].split(",").map(e => e.trim()).filter(e => e !== "") : [];
-        
-        return {
-          name: data[i][nameIdx] || "",
-          areaOfFocus: data[i][areaOfFocusIdx] || "",
-          industry: data[i][industryIdx] || "",
-          company: data[i][companyIdx] || "",
-          major: data[i][majorIdx] || "",
-          additionalInfo: data[i][additionalInfoIdx] || "",
-          linkedinUrl: data[i][linkedinIdx] || "",
-          email: data[i][emailIdx] || "",
-          availableSlots: parseInt(data[i][slotIdx]) || 0,
-          signedUpStudents: signedUp,
-          rowIndex: i + 1
-        };
-      }
-    }
-    
-    throw new Error("Mentor not found: " + mentorName);
-    
-  } catch (error) {
-    console.error("Error in getAdminMentorDetails:", error);
-    throw new Error("Failed to get mentor details: " + error.message);
-  }
-}
+// Get cached mentor data or read fresh data
+function getCachedMentorData(forceRefresh) {
+  if (forceRefresh === undefined) forceRefresh = false;
 
-// Remove a student from a mentor (admin function)
-function removeStudentFromMentor(mentorName, studentEmail) {
   try {
-    var data = adminSheet.getDataRange().getValues();
-    var headers = data[0];
-    
-    var nameIdx = headers.indexOf("First Name & Last Name");
-    var slotIdx = headers.indexOf("Available Slots");
-    var signupIdx = headers.indexOf("Signed-Up Students");
-    
-    // Find alternative slots column if needed
-    if (slotIdx === -1) {
-      for (var i = 0; i < headers.length; i++) {
-        var header = headers[i].trim();
-        if (header.includes("How many conversations") && header.includes("would you be open to having")) {
-          slotIdx = i;
-          break;
-        }
-      }
-    }
-    
-    // Find the mentor
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][nameIdx] === mentorName) {
-        var signedUpRaw = data[i][signupIdx] || "";
-        var signedUpList = signedUpRaw.split(",").map(e => e.trim()).filter(e => e !== "");
-        
-        // Remove the student
-        var updatedList = signedUpList.filter(email => email !== studentEmail);
-        
-        if (updatedList.length === signedUpList.length) {
-          return {
-            success: false,
-            message: "Student not found in this mentor's list"
-          };
-        }
-        
-        // Update the spreadsheet
-        var updatedStudentsString = updatedList.join(", ");
-        adminSheet.getRange(i + 1, signupIdx + 1).setValue(updatedStudentsString);
-        
-        // Increase available slots by 1
-        var currentSlots = parseInt(data[i][slotIdx]) || 0;
-        adminSheet.getRange(i + 1, slotIdx + 1).setValue(currentSlots + 1);
-        
-        return {
-          success: true,
-          message: `Successfully removed ${studentEmail} from ${mentorName}`
-        };
-      }
-    }
-    
-    return {
-      success: false,
-      message: "Mentor not found"
-    };
-    
-  } catch (error) {
-    console.error("Error in removeStudentFromMentor:", error);
-    return {
-      success: false,
-      message: "Failed to remove student: " + error.message
-    };
-  }
-}
+    var currentTimestamp = new Date().getTime();
 
-// Add a student to a mentor manually (admin function)
-function addStudentToMentor(mentorName, studentEmail) {
-  try {
-    // Validate email format
-    var emailValidation = validateVCUEmail(studentEmail);
-    if (!emailValidation.valid) {
-      return {
-        success: false,
-        message: emailValidation.message
-      };
-    }
-    
-    var validEmail = emailValidation.email;
-    var data = adminSheet.getDataRange().getValues();
-    var headers = data[0];
-    
-    var nameIdx = headers.indexOf("First Name & Last Name");
-    var slotIdx = headers.indexOf("Available Slots");
-    var signupIdx = headers.indexOf("Signed-Up Students");
-    
-    // Find alternative slots column if needed
-    if (slotIdx === -1) {
-      for (var i = 0; i < headers.length; i++) {
-        var header = headers[i].trim();
-        if (header.includes("How many conversations") && header.includes("would you be open to having")) {
-          slotIdx = i;
-          break;
-        }
-      }
-    }
-    
-    // // Check if student is already booked with ANY mentor
-    // for (var i = 1; i < data.length; i++) {
-    //   var signedUp = data[i][signupIdx] || "";
-    //   if (signedUp.split(",").map(e => e.trim()).includes(validEmail)) {
-    //     return {
-    //       success: false,
-    //       message: `${validEmail} is already booked with ${data[i][nameIdx]}`
-    //     };
-    //   }
-    // }
-    // Count how many mentors the student has booked
-    var studentBookingCount = 0;
-    for (var i = 1; i < data.length; i++) {
-      var signedUp = data[i][indexes.signedUp] || "";
-      var signedUpList = signedUp.split(",").map(function(e) { return e.trim(); });
-      if (signedUpList.indexOf(studentEmail) !== -1) {
-        studentBookingCount++;
-      }
-    }
-    if (studentBookingCount >= 2) {
-      return { 
-        success: false, 
-        message: "You have already booked sessions with two mentors. Each student can book up to 2 mentors only." 
-      };
+    if (!forceRefresh && cachedMentorData && lastDataTimestamp &&
+        (currentTimestamp - lastDataTimestamp) < 30000) {
+      console.log("Using cached mentor data");
+      return cachedMentorData;
     }
 
-    
-    // Find the specific mentor and add student
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][nameIdx] === mentorName) {
-        var availableSlots = parseInt(data[i][slotIdx]) || 0;
-        
-        if (availableSlots <= 0) {
-          return {
-            success: false,
-            message: "This mentor has no available slots"
-          };
-        }
-        
-        // Add the student
-        var currentStudents = data[i][signupIdx] || "";
-        var updatedStudents = currentStudents + (currentStudents ? ", " : "") + validEmail;
-        adminSheet.getRange(i + 1, signupIdx + 1).setValue(updatedStudents);
-        
-        // Decrease available slots
-        adminSheet.getRange(i + 1, slotIdx + 1).setValue(availableSlots - 1);
-        
-        return {
-          success: true,
-          message: `Successfully added ${validEmail} to ${mentorName}`
-        };
-      }
-    }
-    
-    return {
-      success: false,
-      message: "Mentor not found"
-    };
-    
-  } catch (error) {
-    console.error("Error in addStudentToMentor:", error);
-    return {
-      success: false,
-      message: "Failed to add student: " + error.message
-    };
-  }
-}
+    console.log("Reading fresh mentor data from spreadsheet");
 
-// Add slots to a mentor (admin function)
-function addSlotsToMentor(mentorName, additionalSlots) {
-  try {
-    var data = adminSheet.getDataRange().getValues();
-    var headers = data[0];
-    
-    var nameIdx = headers.indexOf("First Name & Last Name");
-    var slotIdx = headers.indexOf("Available Slots");
-    
-    // Find alternative slots column if needed
-    if (slotIdx === -1) {
-      for (var i = 0; i < headers.length; i++) {
-        var header = headers[i].trim();
-        if (header.includes("How many conversations") && header.includes("would you be open to having")) {
-          slotIdx = i;
-          break;
-        }
-      }
-    }
-    
-    // Find the mentor and update slots
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][nameIdx] === mentorName) {
-        var currentSlots = parseInt(data[i][slotIdx]) || 0;
-        var newSlots = currentSlots + additionalSlots;
-        
-        adminSheet.getRange(i + 1, slotIdx + 1).setValue(newSlots);
-        
-        return {
-          success: true,
-          message: `Added ${additionalSlots} slot(s) to ${mentorName}. New total: ${newSlots}`
-        };
-      }
-    }
-    
-    return {
-      success: false,
-      message: "Mentor not found"
-    };
-    
-  } catch (error) {
-    console.error("Error in addSlotsToMentor:", error);
-    return {
-      success: false,
-      message: "Failed to add slots: " + error.message
-    };
-  }
-}
+    var indexes = getColumnIndexes();
+    var dataRange = sheet.getDataRange();
+    var data = dataRange.getValues();
 
-// Get all mentor data for export
-function getAllMentorData() {
-  try {
-    var data = adminSheet.getDataRange().getValues();
     if (data.length <= 1) {
+      cachedMentorData = [];
+      lastDataTimestamp = currentTimestamp;
       return [];
     }
-    
-    var headers = data[0];
-    
-    // Map all relevant columns using correct names from Excel file
-    var nameIdx = headers.indexOf("First Name & Last Name");
-    var areaOfFocusIdx = headers.indexOf("What is your area of focus?");
-    var industryIdx = headers.indexOf("Industry you can share about.");
-    var majorIdx = headers.indexOf("What was your major?");
-    var additionalInfoIdx = headers.indexOf("Any other information about yourself that might be helpful to a student in determining whom to talk with? ");
-    var linkedinIdx = headers.indexOf("What is your LinkedIn Profile?");
-    
-    // Company and email columns
-    var companyIdx = headers.indexOf("Company");
-    if (companyIdx === -1) {
-      companyIdx = headers.indexOf("What company are you with or previously with?");
-    }
-    
-    var emailIdx = headers.indexOf("Email Address");
-    if (emailIdx === -1) {
-      emailIdx = headers.indexOf("Preferred email address for students to use to contact you. This email will only be shared with the specific student(s) who sign up to talk with you. ");
-    }
-    
-    var slotIdx = headers.indexOf("Available Slots");
-    var signupIdx = headers.indexOf("Signed-Up Students");
-    
-    // Try alternative column names for slots
-    if (slotIdx === -1) {
-      for (var i = 0; i < headers.length; i++) {
-        var header = headers[i].trim();
-        if (header.includes("How many conversations") && header.includes("would you be open to having")) {
-          slotIdx = i;
-          break;
-        }
-      }
-    }
-    
+
     var mentors = [];
-    
-    // Process each mentor row
     for (var i = 1; i < data.length; i++) {
-      var signedUpRaw = data[i][signupIdx] || "";
-      var signedUp = signedUpRaw ? signedUpRaw.split(",").map(e => e.trim()).filter(e => e !== "") : [];
-      
+      var row = data[i];
+
+      // FIXED: signedUp column stores a comma-separated list of student emails
+      // (that's what bookSlot/addStudentToMentor write). The old code did
+      // parseInt() on this string, which always returned 0. Now we split it
+      // into a real array, matching how bookSlot/checkUserBookingStatus use it.
+      var signedUpRaw = row[indexes.signedUp] || "";
+      var signedUpList = signedUpRaw
+        ? signedUpRaw.toString().split(",").map(function(e) { return e.trim(); }).filter(function(e) { return e !== ""; })
+        : [];
+
       mentors.push({
-        name: data[i][nameIdx] || "",
-        areaOfFocus: data[i][areaOfFocusIdx] || "",
-        industry: data[i][industryIdx] || "",
-        company: data[i][companyIdx] || "",
-        major: data[i][majorIdx] || "",
-        additionalInfo: data[i][additionalInfoIdx] || "",
-        linkedinUrl: data[i][linkedinIdx] || "",
-        email: data[i][emailIdx] || "",
-        availableSlots: parseInt(data[i][slotIdx]) || 0,
-        signedUpStudents: signedUp,
-        studentCount: signedUp.length,
+        name: row[indexes.name] || "",
+        areaOfFocus: row[indexes.areaOfFocus] || "",
+        industry: row[indexes.industry] || "",
+        company: row[indexes.company] || "",
+        major: row[indexes.major] || "",
+        additionalInfo: row[indexes.additionalInfo] || "",
+        linkedinUrl: row[indexes.linkedin] || "",
+        email: row[indexes.email] || "",
+        availableSlots: parseInt(row[indexes.slots]) || 0,
+        signedUpStudents: signedUpList, // ← now a real array of emails, not a broken number
         rowIndex: i + 1
       });
     }
-    
+
+    cachedMentorData = mentors;
+    lastDataTimestamp = currentTimestamp;
+    console.log("Cached " + mentors.length + " mentors");
+
     return mentors;
-    
+
   } catch (error) {
-    console.error("Error in getAllMentorData:", error);
-    throw new Error("Failed to get all mentor data: " + error.message);
+    console.error("Error getting mentor data:", error);
+    throw new Error("Failed to load mentor data: " + error.message);
   }
 }
 
-// Bulk update mentor slots (admin function)
-function bulkUpdateSlots(updates) {
+// Clear cache when data is modified
+function clearMentorDataCache() {
+  cachedMentorData = null;
+  lastDataTimestamp = null;
+  console.log("Mentor data cache cleared");
+}
+
+// Get detailed mentor information
+function getMentorProfile(mentorName, userEmail) {
   try {
-    var data = adminSheet.getDataRange().getValues();
-    var headers = data[0];
-    
-    var nameIdx = headers.indexOf("First Name & Last Name");
-    var slotIdx = headers.indexOf("Available Slots");
-    
-    // Find alternative slots column if needed
-    if (slotIdx === -1) {
-      for (var i = 0; i < headers.length; i++) {
-        var header = headers[i].trim();
-        if (header.includes("How many conversations") && header.includes("would you be open to having")) {
-          slotIdx = i;
-          break;
-        }
+    var studentEmail = null;
+    if (userEmail) {
+      var validation = validateVCUEmail(userEmail);
+      if (!validation.valid) {
+        throw new Error("Invalid email: " + validation.message);
+      }
+      studentEmail = validation.email;
+    }
+
+    var mentors = getCachedMentorData();
+
+    var mentor = null;
+    for (var i = 0; i < mentors.length; i++) {
+      if (mentors[i].name === mentorName) {
+        mentor = mentors[i];
+        break;
       }
     }
-    
-    var updateCount = 0;
-    var errors = [];
-    
-    // Process each update
-    updates.forEach(function(update) {
-      var mentorName = update.mentorName;
-      var newSlots = parseInt(update.slots);
-      
-      if (isNaN(newSlots) || newSlots < 0) {
-        errors.push(`Invalid slot count for ${mentorName}: ${update.slots}`);
-        return;
-      }
-      
-      // Find and update the mentor
-      for (var i = 1; i < data.length; i++) {
-        if (data[i][nameIdx] === mentorName) {
-          adminSheet.getRange(i + 1, slotIdx + 1).setValue(newSlots);
-          updateCount++;
-          break;
-        }
-      }
-    });
-    
+
+    if (!mentor) {
+      throw new Error("Mentor not found: " + mentorName);
+    }
+
+    var linkedinUrl = mentor.linkedinUrl;
+    if (linkedinUrl && linkedinUrl.indexOf("http") !== 0) {
+      linkedinUrl = "https://" + linkedinUrl;
+    }
+
     return {
-      success: true,
-      message: `Updated ${updateCount} mentors successfully`,
-      updateCount: updateCount,
-      errors: errors
+      name: mentor.name,
+      areaOfFocus: mentor.areaOfFocus,
+      industry: mentor.industry,
+      company: mentor.company,
+      major: mentor.major,
+      additionalInfo: mentor.additionalInfo,
+      linkedinUrl: linkedinUrl,
+      email: mentor.email,
+      availableSlots: mentor.availableSlots,
+      signedUpStudents: mentor.signedUpStudents,
+      isBookedByCurrentUser: studentEmail ? mentor.signedUpStudents.indexOf(studentEmail) !== -1 : false
     };
-    
+
   } catch (error) {
-    console.error("Error in bulkUpdateSlots:", error);
-    return {
-      success: false,
-      message: "Failed to bulk update slots: " + error.message
-    };
+    console.error("Error in getMentorProfile:", error);
+    throw new Error("Failed to load mentor profile: " + error.message);
   }
 }
 
-// Get mentor statistics for admin dashboard
-function getMentorStatistics() {
+// Book a slot
+function bookSlot(mentorName, userEmail) {
   try {
-    var mentors = getAllMentorData();
-    
-    var stats = {
-      totalMentors: mentors.length,
-      totalSlots: 0,
-      totalBookings: 0,
-      availableSlots: 0,
-      fullMentors: 0,
-      emptyMentors: 0,
-      industryBreakdown: {},
-      companyBreakdown: {},
-      averageBookingsPerMentor: 0,
-      mostBookedMentor: { name: "", bookings: 0 },
-      leastBookedMentor: { name: "", bookings: 999 }
-    };
-    
-    mentors.forEach(function(mentor) {
-      stats.totalSlots += mentor.availableSlots;
-      stats.totalBookings += mentor.studentCount;
-      stats.availableSlots += mentor.availableSlots;
-      
-      if (mentor.availableSlots === 0) {
-        stats.fullMentors++;
-      }
-      
-      if (mentor.studentCount === 0) {
-        stats.emptyMentors++;
-      }
-      
-      // Industry breakdown
-      if (mentor.industry) {
-        stats.industryBreakdown[mentor.industry] = (stats.industryBreakdown[mentor.industry] || 0) + 1;
-      }
-      
-      // Company breakdown
-      if (mentor.company) {
-        stats.companyBreakdown[mentor.company] = (stats.companyBreakdown[mentor.company] || 0) + 1;
-      }
-      
-      // Most/least booked
-      if (mentor.studentCount > stats.mostBookedMentor.bookings) {
-        stats.mostBookedMentor = { name: mentor.name, bookings: mentor.studentCount };
-      }
-      
-      if (mentor.studentCount < stats.leastBookedMentor.bookings) {
-        stats.leastBookedMentor = { name: mentor.name, bookings: mentor.studentCount };
-      }
-    });
-    
-    stats.averageBookingsPerMentor = mentors.length > 0 ? (stats.totalBookings / mentors.length).toFixed(1) : 0;
-    
-    return stats;
-    
-  } catch (error) {
-    console.error("Error in getMentorStatistics:", error);
-    throw new Error("Failed to get mentor statistics: " + error.message);
-  }
-}
-
-// Search and filter mentors for admin
-function searchMentors(query, filters) {
-  try {
-    var mentors = getAllMentorData();
-    
-    if (!query && !filters) {
-      return mentors;
+    var validation = validateVCUEmail(userEmail);
+    if (!validation.valid) {
+      return { success: false, message: "Invalid email: " + validation.message };
     }
-    
-    var filtered = mentors.filter(function(mentor) {
-      var matchesQuery = true;
-      var matchesFilters = true;
-      
-      // Text search
-      if (query) {
-        var searchText = query.toLowerCase();
-        matchesQuery = 
-          mentor.name.toLowerCase().includes(searchText) ||
-          mentor.company.toLowerCase().includes(searchText) ||
-          mentor.industry.toLowerCase().includes(searchText) ||
-          mentor.areaOfFocus.toLowerCase().includes(searchText) ||
-          mentor.major.toLowerCase().includes(searchText);
-      }
-      
-      // Filters
-      if (filters) {
-        if (filters.industry && mentor.industry !== filters.industry) {
-          matchesFilters = false;
-        }
-        
-        if (filters.company && mentor.company !== filters.company) {
-          matchesFilters = false;
-        }
-        
-        if (filters.hasSlots !== undefined) {
-          if (filters.hasSlots && mentor.availableSlots === 0) {
-            matchesFilters = false;
-          } else if (!filters.hasSlots && mentor.availableSlots > 0) {
-            matchesFilters = false;
-          }
-        }
-        
-        if (filters.hasStudents !== undefined) {
-          if (filters.hasStudents && mentor.studentCount === 0) {
-            matchesFilters = false;
-          } else if (!filters.hasStudents && mentor.studentCount > 0) {
-            matchesFilters = false;
-          }
-        }
-      }
-      
-      return matchesQuery && matchesFilters;
-    });
-    
-    return filtered;
-    
-  } catch (error) {
-    console.error("Error in searchMentors:", error);
-    throw new Error("Failed to search mentors: " + error.message);
-  }
-}
+    var studentEmail = validation.email;
+    var indexes = getColumnIndexes();
 
-// Reset all mentor data (admin emergency function)
-function resetAllMentorData() {
-  try {
-    var data = adminSheet.getDataRange().getValues();
-    var headers = data[0];
-    
-    var signupIdx = headers.indexOf("Signed-Up Students");
-    var slotIdx = headers.indexOf("Available Slots");
-    
-    // Find alternative slots column if needed
-    if (slotIdx === -1) {
-      for (var i = 0; i < headers.length; i++) {
-        var header = headers[i].trim();
-        if (header.includes("How many conversations") && header.includes("would you be open to having")) {
-          slotIdx = i;
-          break;
-        }
-      }
-    }
-    
-    var resetCount = 0;
-    
-    // Clear all student bookings and reset slots to original values
+    var data = sheet.getDataRange().getValues();
+
     for (var i = 1; i < data.length; i++) {
-      // Clear signed up students
-      if (signupIdx !== -1) {
-        adminSheet.getRange(i + 1, signupIdx + 1).setValue("");
+      if (data[i][indexes.name] === mentorName) {
+        var availableSlots = parseInt(data[i][indexes.slots]) || 0;
+
+        if (availableSlots <= 0) {
+          return { success: false, message: "This mentor has no available slots remaining." };
+        }
+
+        sheet.getRange(i + 1, indexes.slots + 1).setValue(availableSlots - 1);
+
+        var currentStudents = data[i][indexes.signedUp] || "";
+        var updatedStudents = currentStudents + (currentStudents ? ", " : "") + studentEmail;
+        sheet.getRange(i + 1, indexes.signedUp + 1).setValue(updatedStudents);
+
+        clearMentorDataCache();
+
+        var mentorEmail = data[i][indexes.email];
+        var areaOfFocus = data[i][indexes.areaOfFocus];
+        var industry = data[i][indexes.industry];
+        var company = data[i][indexes.company];
+
+        var linkedinUrl = data[i][indexes.linkedin] || "";
+        if (linkedinUrl && linkedinUrl.indexOf("http") !== 0) {
+          linkedinUrl = "https://" + linkedinUrl;
+        }
+
+        var emailSubject = "VCU Engineering Alternate Assignment Career Conversation Mentor Confirmed - " + mentorName;
+        var emailBody = "Dear " + studentEmail + ",\n\n" +
+          "CONGRATULATIONS! You have selected " + mentorName + " as your mentor for career conversation.\n\n" +
+          "Name: " + mentorName + "\n" +
+          "Email: " + mentorEmail + "\n" +
+          "Area of Focus: " + areaOfFocus + "\n" +
+          "Industry: " + industry + "\n" +
+          "Company: " + company + "\n" +
+          (linkedinUrl ? "LinkedIn Profile: " + linkedinUrl + "\n" : "") +
+          "\nWe're excited for you to connect with " + mentorName + "!\n\n" +
+          "Best regards,\nVCU College of Engineering Career Services Team\n\n" +
+          "This is an automated message. Please do not reply to this email.";
+
+        try {
+          MailApp.sendEmail({ to: studentEmail, subject: emailSubject, body: emailBody });
+        } catch (emailError) {
+          console.error("Email sending failed:", emailError); // don't fail the booking if email fails
+        }
+
+        return { success: true, message: "Successfully booked with " + mentorName + "! Check your VCU email " + studentEmail + " for confirmation details." };
       }
-      
-      // Reset available slots to original conversation count
-      var originalSlots = parseInt(data[i][slotIdx]) || 0;
-      if (slotIdx !== -1) {
-        // This assumes the original slot count is stored somewhere
-        // You might need to adjust this logic based on your needs
-        adminSheet.getRange(i + 1, slotIdx + 1).setValue(originalSlots);
-      }
-      
-      resetCount++;
     }
-    
-    return {
-      success: true,
-      message: `Reset ${resetCount} mentor records`,
-      resetCount: resetCount
-    };
-    
+
+    return { success: false, message: "Mentor not found or no longer available." };
+
   } catch (error) {
-    console.error("Error in resetAllMentorData:", error);
-    return {
-      success: false,
-      message: "Failed to reset mentor data: " + error.message
-    };
+    console.error("Error in bookSlot:", error);
+    return { success: false, message: "Booking failed: " + error.message };
   }
-}function myFunction() {
-  
+}
+
+// Check if user has already booked a mentor
+function checkUserBookingStatus(userEmail) {
+  try {
+    var validation = validateVCUEmail(userEmail);
+    if (!validation.valid) {
+      return { hasBooked: false, error: "Invalid email" };
+    }
+    var studentEmail = validation.email;
+
+    var mentors = getCachedMentorData();
+    for (var i = 0; i < mentors.length; i++) {
+      if (mentors[i].signedUpStudents.indexOf(studentEmail) !== -1) {
+        return { hasBooked: true, mentorName: mentors[i].name };
+      }
+    }
+    return { hasBooked: false };
+
+  } catch (error) {
+    console.error("Error checking booking status:", error);
+    return { hasBooked: false, error: error.message };
+  }
+}
+
+function markBookingDone(data) {
+  try {
+    var mentorName = data.mentor;
+    var studentEmail = data.email;
+    if (!mentorName || !studentEmail) {
+      return { success: false, message: "Missing mentor or email" };
+    }
+
+    var indexes = getColumnIndexes();
+    var values = sheet.getDataRange().getValues();
+
+    for (var i = 1; i < values.length; i++) {
+      if (values[i][indexes.name] === mentorName) {
+        var currentStudents = values[i][indexes.signedUp] ? values[i][indexes.signedUp].toString() : "";
+        var updatedList = currentStudents
+          .split(",")
+          .map(function(s) { return s.trim(); })
+          .filter(function(s) { return s !== "" && s !== studentEmail; })
+          .join(", ");
+
+        sheet.getRange(i + 1, indexes.signedUp + 1).setValue(updatedList);
+        clearMentorDataCache();
+        return { success: true, message: "Marked as done" };
+      }
+    }
+    return { success: false, message: "Mentor not found: " + mentorName };
+
+  } catch (e) {
+    return { success: false, message: "Error: " + e.message };
+  }
+}
+
+// Debug function to check spreadsheet columns
+function debugSpreadsheetColumns() {
+  try {
+    var indexes = getColumnIndexes();
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    console.log("=== SPREADSHEET DEBUG INFO ===");
+    console.log("Total columns found:", headers.length);
+    console.log("Total rows found:", data.length);
+    console.log("Column indexes:", indexes);
+    headers.forEach(function(header, index) {
+      console.log("Column " + index + ":", header);
+    });
+    return { totalColumns: headers.length, totalRows: data.length, headers: headers, indexes: indexes, success: true };
+  } catch (error) {
+    console.error("Debug error:", error);
+    return { success: false, error: error.message };
+  }
 }
