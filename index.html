@@ -574,6 +574,7 @@ function setupActivityTracking() {
       document.getElementById("mentorsTable").classList.add("hidden");
       callGAS("getMentors", { email: currentUserEmail })
         .then(function(mentors) {
+			console.log("Raw data from callGAS:", mentors);
           allMentors = mentors;
           // Seed bookedMentorNames from server-side isBookedByCurrentUser flag
           allMentors.forEach(function(m) { if (m.isBookedByCurrentUser) bookedMentorNames.add(m.name); });
