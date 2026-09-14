@@ -551,7 +551,7 @@ function setupActivityTracking() {
     function checkUserBooking() {
   if (!currentUserEmail) return;
 
-  callGAS({ action: "checkUserBookingStatus", email: currentUserEmail })
+  callGAS(  "checkUserBookingStatus", {email: currentUserEmail })
     .then(function(bookingStatus) {
       userBookingStatus = bookingStatus;
 
@@ -574,9 +574,9 @@ function setupActivityTracking() {
       document.getElementById("loadingState").classList.remove("hidden");
       document.getElementById("mentorsTable").classList.add("hidden");
       callGAS("getMentors", { email: currentUserEmail })
-        .then(function(mentors) {
-			console.log("Raw data from callGAS:", mentors);
-          allMentors = mentors.mentors;
+        .then(function(response) {
+			console.log("Raw data from callGAS:", response);
+          allMentors = response.mentors;
           // Seed bookedMentorNames from server-side isBookedByCurrentUser flag
           allMentors.forEach(function(m) { if (m.isBookedByCurrentUser) bookedMentorNames.add(m.name); });
           populateFilters();
