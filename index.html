@@ -486,9 +486,10 @@ function setupActivityTracking() {
         .then(function(result) {
           if (result.success) {
             showEmailMessage("Verification code sent! Check your email.", "success");
-            setTimeout(function() { showVerificationScreen(result.email); }, 1500);
+            setTimeout(function() { showVerificationScreen(result.email); }, 900);
           } else {
             btn.disabled = false; btn.innerHTML = 'Send Verification Code';
+			console.log("you're in else condition");
             showEmailMessage(result.message, "error"); emailInput.focus();
           }
         })
