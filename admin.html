@@ -804,7 +804,7 @@
   </div>
 
   <script>
-      const GAS_URL = "https://script.google.com/macros/s/AKfycbw-JPye5itKs5r-qdx8kOw8ZnZ0YwcOulc1UnztyPk4h_VLWJ7pcfy8lpLjaziZMXzHFA/exec";
+      const webAppUrl = "https://script.google.com/macros/s/AKfycbw-JPye5itKs5r-qdx8kOw8ZnZ0YwcOulc1UnztyPk4h_VLWJ7pcfy8lpLjaziZMXzHFA/exec";
 
     let adminData = [];
     let currentMentor = null;
@@ -895,7 +895,6 @@
   document.getElementById("loadingState").classList.remove("hidden");
   document.getElementById("adminTable").classList.add("hidden");
 
-  const webAppUrl = "https://script.google.com/macros/s/AKfycbw-JPye5itKs5r-qdx8kOw8ZnZ0YwcOulc1UnztyPk4h_VLWJ7pcfy8lpLjaziZMXzHFA/exec";
 
   // Use standard fetch instead of google.script.run
   fetch(webAppUrl + "?action=getAdminOverview")
