@@ -493,7 +493,7 @@ function bookSlot(mentorName, userEmail) {
           "This is an automated message. Please do not reply to this email.";
 
         try {
-          MailApp.sendEmail({ to: studentEmail, subject: emailSubject, body: emailBody });
+          MailApp.sendEmail({  studentEmail, emailSubject, emailBody, {from: "engrstwk2@vcu.edu", name:"Engineering Career Services"} );
         } catch (emailError) {
           console.error("Email sending failed:", emailError); // don't fail the booking if email fails
         }
