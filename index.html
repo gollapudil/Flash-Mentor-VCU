@@ -407,11 +407,32 @@ function setupActivityTracking() {
 // ────────────────────────────────────────────────────────────
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzdmLXj2nL-2NZOicFrQPMSabAwOic7uWFkYyQ6z1S9o4yCyqdxrymCIpuqxMKlS2kmrA/exec";
 
-    function callGAS(action, params) {
-      var body = JSON.stringify(Object.assign({ action: action }, params || {}));
-      return fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: body })
-        .then(function(r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
-    }
+    function callGAS(action, params, retriesLeft) {
+  if (retriesLeft === undefined) retriesLeft = 2; // total attempts = 3
+
+  var body = JSON.stringify(Object.assign({ action: action }, params || {}));
+
+  return fetch(GAS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: body
+  })
+    .then(function(r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
+    .catch(function(error) {
+      if (retriesLeft > 0) {
+        console.warn("callGAS retrying after error:", error.message, "| retries left:", retriesLeft);
+        return new Promise(function(resolve) {
+          setTimeout(function() {
+            resolve(callGAS(action, params, retriesLeft - 1));
+          }, 700); // wait 0.7s before retrying
+        });
+      }
+      throw error; // out of retries, let the real error surface
+    });
+}
 
     // ── State ────────────────────────────────────────────────────────────────
     var allMentors       = [];
