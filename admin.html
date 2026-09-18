@@ -899,6 +899,8 @@
   // Use standard fetch instead of google.script.run
   fetch(webAppUrl + "?action=getAdminOverview")
     .then(response => {
+       console.log("Status:", response.status);
+       console.log("Status text:", response.statusText);
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
