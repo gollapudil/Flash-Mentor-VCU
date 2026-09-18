@@ -548,25 +548,28 @@ function setupActivityTracking() {
       showEmailScreen();
       showEmailMessage("You have been logged out.", "info");
     }
-    function checkUserBooking() {
+   function checkUserBooking() {
   if (!currentUserEmail) return;
 
-  callGAS(  "checkUserBookingStatus", {email: currentUserEmail })
+  callGAS("checkUserBookingStatus", { email: currentUserEmail })
     .then(function(bookingStatus) {
       userBookingStatus = bookingStatus;
 
-      if (bookingStatus.hasBooked) {
-        document.getElementById('bookingAlert').classList.remove('hidden');
-        document.getElementById('bookedMentorName').textContent = bookingStatus.mentorName;
-      } else {
-        document.getElementById('bookingAlert').classList.add('hidden');
+      var alertEl = document.getElementById('bookingAlert');
+      if (alertEl) {
+        if (bookingStatus.hasBooked) {
+          alertEl.classList.remove('hidden');
+          document.getElementById('bookedMentorName').textContent = bookingStatus.mentorName;
+        } else {
+          alertEl.classList.add('hidden');
+        }
       }
 
       loadMentors();
     })
     .catch(function(error) {
       console.error("Error checking booking status:", error);
-      loadMentors(); // still load mentors even if check fails
+      loadMentors();
     });
 }
     // ── 4. Load Mentors ──────────────────────────────────────────────────────
