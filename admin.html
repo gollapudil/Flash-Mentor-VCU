@@ -804,8 +804,35 @@
   </div>
 
   <script>
-      const webAppUrl = "https://script.google.com/macros/s/AKfycbzdmLXj2nL-2NZOicFrQPMSabAwOic7uWFkYyQ6z1S9o4yCyqdxrymCIpuqxMKlS2kmrA/exec";
 
+    const ADMIN_SESSION_MS = 4 * 60 * 60 * 1000; // 4 hours — change this number if you want longer/shorter
+
+function saveAdminSession() {
+  localStorage.setItem("vcu_admin_session", JSON.stringify({ loginTime: Date.now() }));
+}
+
+function clearAdminSession() {
+  localStorage.removeItem("vcu_admin_session");
+}
+
+function getValidAdminSession() {
+  try {
+    const raw = localStorage.getItem("vcu_admin_session");
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (Date.now() - s.loginTime > ADMIN_SESSION_MS) {
+      clearAdminSession();
+      return null;
+    }
+    return s;
+  } catch (e) {
+    clearAdminSession();
+    return null;
+  }
+}
+    //WEBAPP_URL
+    const webAppUrl = "https://script.google.com/macros/s/AKfycbzdmLXj2nL-2NZOicFrQPMSabAwOic7uWFkYyQ6z1S9o4yCyqdxrymCIpuqxMKlS2kmrA/exec";
+    
     let adminData = [];
     let currentMentor = null;
     let isAuthenticated = false;
@@ -854,6 +881,7 @@
       // Simple password check
       if (password === "vcu2026admin") {
         isAuthenticated = true;
+        saveAdminSession();
         showDashboard();
         loadData();
       } else {
@@ -881,6 +909,7 @@
 
     function handleLogout() {
       isAuthenticated = false;
+      clearAdminSession();
       document.getElementById("adminPassword").value = "";
       document.getElementById("authBtn").disabled = false;
       document.getElementById("authBtn").textContent = "Access Dashboard";
@@ -1327,6 +1356,12 @@ function removeStudent(email) {
     // Initialize
     window.onload = function() {
       // Start with auth screen
+      const session= getValidAdminSession();
+      if(session){
+        isAuthenticated=true;
+        showDashboard();
+        loadData();
+      } else{
       document.getElementById("adminAuth").classList.remove("hidden");
       document.getElementById("adminDashboard").classList.add("hidden");
       
@@ -1334,6 +1369,7 @@ function removeStudent(email) {
       setTimeout(function() {
         document.getElementById("adminPassword").focus();
       }, 100);
+      }
     };
 
     // Close modal when clicking outside
