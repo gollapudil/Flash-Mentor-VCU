@@ -1320,10 +1320,33 @@ function removeStudent(email) {
       displayTable(filtered);
     }
 
-    function refreshData() {
-      loadData();
-    }
+function refreshData() {
+  loadDataForced();
+}
 
+function loadDataForced() {
+  document.getElementById("loadingState").classList.remove("hidden");
+  document.getElementById("adminTable").classList.add("hidden");
+
+  fetch(webAppUrl + "?action=getAdminOverview&forceRefresh=true")
+    .then(function(response) {
+      if (!response.ok) throw new Error("Network response was not ok");
+      return response.json();
+    })
+    .then(function(data) {
+      adminData = data.mentors;
+      updateStats(data);
+      displayTable(adminData);
+      document.getElementById("loadingState").classList.add("hidden");
+      document.getElementById("adminTable").classList.remove("hidden");
+    })
+    .catch(function(error) {
+      document.getElementById("loadingState").classList.add("hidden");
+      document.getElementById("tableBody").innerHTML =
+        '<tr><td colspan="7" class="error-message">Error loading data: ' + error.message + '</td></tr>';
+      document.getElementById("adminTable").classList.remove("hidden");
+    });
+}
     function exportData() {
       // Create CSV data
       let csvContent = "Mentor Name,Company,Industry,Available Slots,Booked Students,Student Emails\n";
