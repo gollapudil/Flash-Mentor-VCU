@@ -920,33 +920,34 @@ function getValidAdminSession() {
     }
 
     // Data loading-- I used to use google.script.run, but now using fetch for better error handling and flexibility
-   function loadData() {
+   function loadData(retriesLeft) {
+  if (retriesLeft === undefined) retriesLeft = 2;
+
   document.getElementById("loadingState").classList.remove("hidden");
   document.getElementById("adminTable").classList.add("hidden");
 
-
-  // Use standard fetch instead of google.script.run
   fetch(webAppUrl + "?action=getAdminOverview")
-    .then(response => {
-       console.log("Status:", response.status);
-       console.log("Status text:", response.statusText);
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
+    .then(function(response) {
+      if (!response.ok) throw new Error("Network response was not ok");
       return response.json();
     })
-    .then(data => {
-      adminData = data.mentors || [];
+    .then(function(data) {
+      adminData = data.mentors;
       updateStats(data);
       displayTable(adminData);
       document.getElementById("loadingState").classList.add("hidden");
       document.getElementById("adminTable").classList.remove("hidden");
     })
-    .catch(error => {
-      document.getElementById("loadingState").classList.add("hidden");
-      document.getElementById("tableBody").innerHTML = 
-        `<tr><td colspan="7" class="error-message">Error loading data: ${error.message}</td></tr>`;
-      document.getElementById("adminTable").classList.remove("hidden");
+    .catch(function(error) {
+      if (retriesLeft > 0) {
+        console.warn("loadData retrying after error:", error.message, "| retries left:", retriesLeft);
+        setTimeout(function() { loadData(retriesLeft - 1); }, 700);
+      } else {
+        document.getElementById("loadingState").classList.add("hidden");
+        document.getElementById("tableBody").innerHTML =
+          '<tr><td colspan="7" class="error-message">Error loading data: ' + error.message + '</td></tr>';
+        document.getElementById("adminTable").classList.remove("hidden");
+      }
     });
 }
 
