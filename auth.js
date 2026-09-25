@@ -1,6 +1,6 @@
 const AUTH0_DOMAIN    = "vcumentors.us.auth0.com";   // from Auth0 dashboard
 const AUTH0_CLIENT_ID = "JbZvr8oldo60N3zPyEfp2Pqyqn2TjzwR";              // from Auth0 dashboard
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzdmLXj2nL-2NZOicFrQPMSabAwOic7uWFkYyQ6z1S9o4yCyqdxrymCIpuqxMKlS2kmrA/exec"; // your GAS URL
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxcQp7jvQenQVJE2QWKqXQAEpWDqBfqfCIlM3YB65iY6MZ1IH3wnMMH752wEvLC1MeW_A/exec"; // your GAS URL
 
 let auth0Client = null;
 
