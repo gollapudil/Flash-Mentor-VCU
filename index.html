@@ -7,6 +7,24 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+	  .feedback-link {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(255,255,255,0.2);
+  color: white;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+.feedback-link:hover { background: rgba(255,255,255,0.35); }
+
+@media (max-width: 768px) {
+  .feedback-link { position: static; display: inline-block; margin-top: 12px; }
+}
     body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: #333; }
     .auth-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
     .auth-card { background: white; border-radius: 20px; padding: 40px; max-width: 500px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; }
@@ -215,6 +233,7 @@
   <!-- Main Application -->
   <div id="mainApp" class="main-app hidden">
     <header class="app-header">
+		<a class="feedback-link" href="https://accounts.skilljar.com/accounts/login/?t=3gufixqhei80k&d=cahl60vup5xv&next=%2Fauth%2Fendpoint%2Flogin%2Fresult%3Fnext%3D%252Fcheckout%252F2drxm0mvrhc8w%26d%3Dcahl60vup5xv" target="_blank" rel="noopener noreferrer">💬 Give Feedback</a> <!--Added Feedback link>
       <h1>🎓  VCU Engineering  Career Conversation</h1>
       <p class="subtitle">Browse mentors, add to cart, and confirm your bookings</p>
       <div class="user-info">
